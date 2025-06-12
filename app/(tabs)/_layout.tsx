@@ -1,43 +1,104 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, Text, View } from 'react-native';
+import {
+  Home,
+  HomeIcon,
+  Grid3X3,
+  Grid3X3Icon,
+  ShoppingCart,
+  ShoppingCartIcon,
+  User,
+  UserIcon,
+} from 'lucide-react-native';
 
 import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
+
+        headerShown: true,
+        headerStyle: {
+          backgroundColor: 'white',
+          shadowColor: 'transparent',
+          elevation: 0,
+          borderBottomWidth: 0,
+
+        },
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
+        tabBarStyle: {
+          backgroundColor: 'white',
+          borderTopWidth: 1,
+          borderTopColor: '#f0f3f5',
+          paddingBottom: Platform.select({ ios: 20, default: 12 }),
+          paddingTop: 8,
+          height: Platform.select({ ios: 90, default: 70 }),
+          ...Platform.select({
+            ios: {
+              position: 'absolute',
+            },
+            default: {},
+          }),
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: 4,
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
+
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+
+          headerShown: true,
+          tabBarIcon: ({ color, size, focused }) =>
+            focused ? (
+              <HomeIcon color={color} size={size || 24} />
+            ) : (
+              <Home color={color} size={size || 24} />
+            ),
+
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="products"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Products',
+          tabBarIcon: ({ color, size, focused }) =>
+            focused ? (
+              <Grid3X3Icon color={color} size={size || 24} />
+            ) : (
+              <Grid3X3 color={color} size={size || 24} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="orders"
+        options={{
+          title: 'Orders',
+          tabBarIcon: ({ color, size, focused }) =>
+            focused ? (
+              <ShoppingCartIcon color={color} size={size || 24} />
+            ) : (
+              <ShoppingCart color={color} size={size || 24} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: 'Account',
+          tabBarIcon: ({ color, size, focused }) =>
+            focused ? (
+              <UserIcon color={color} size={size || 24} />
+            ) : (
+              <User color={color} size={size || 24} />
+            ),
         }}
       />
     </Tabs>

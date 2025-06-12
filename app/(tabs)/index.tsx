@@ -1,75 +1,172 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React, { useLayoutEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  SafeAreaView,
+} from 'react-native';
+import { Search } from 'lucide-react-native';
+import { useNavigation } from 'expo-router';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const AquaHomeApp = () => {
 
-export default function HomeScreen() {
+  const navigation = useNavigation();
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerTitle: () => (
+
+        <Text className="text-2xl font-grotesk-bold text-[#121516]">AQUA HOME</Text>
+
+      ),
+      headerTitleAlign: 'center',
+    });
+  }, [navigation]);
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
-}
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+
+        {/* Search Bar */}
+        <View className="px-4 py-3 hidden">
+          <View className="flex-row h-14 bg-[#f1f3f4] rounded-xl items-center">
+            <View className="pl-4 pr-2">
+              <Search size={24} color="#607e8a" />
+            </View>
+            <TextInput
+              placeholder="Search products"
+              placeholderTextColor="#607e8a"
+              className="flex-1 text-[#111618] text-base px-2 font-grotesk-medium"
+            />
+          </View>
+        </View>
+
+        {/* Popular Products */}
+        <Text className="text-3xl font-grotesk-bold text-[#121516] px-4 pb-3 pt-5">
+          Popular Products
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="pl-4"
+          contentContainerStyle={{ paddingRight: 16 }}
+        >
+          <View className="w-60 mr-3">
+            <Image
+              source={{
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCn8Xq0NZjLTnruHqThxvgDdGZ72-pTxzgjv101iAqgcS8nLTbdx-6cEVHNnJe-z1_WJ3aPsphBitkQWb25laSSnAhhnfgJ-n3ORNQ8pCFJju8wIHyROOcuIcLvQxHJMg6ijpvWsdeiNKxBVRH_AF1u2ivHOLqrOA23P56PWbbJOirVyHNtO73WdPcdjHsquiPXD9VTYbze4lmBLhOL47CP5k3FKN1h89pl4s_H-ST4SxJJbU3AW7oP-V7Br-IP51QFY3egpE7ntA'
+              }}
+              className="w-full aspect-square rounded-xl mb-4"
+            />
+            <View className="gap-1">
+              <Text className="text-xl font-grotesk-bold text-[#121516]">
+                AquaPure 3000
+              </Text>
+              <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
+                Advanced filtration for ultimate purity
+              </Text>
+            </View>
+          </View>
+
+          <View className="w-60 mr-3">
+            <Image
+              source={{
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCeNZNfVjMgkhHSKOvQyN9T11WD62lrh8xB80nx6nuazPZWxpyNjk7KADSIPd1UX7-M3A95YfjOHAv7-eVRsOkh-9DTlZYJFsGacmDMnaEk6w681sL1hJOJUtA-mPOCpJzwQVxBrwrDgbP2aUHfcNpu3duxe-YQnBdBXLVGM_xKSn7eeK6c0FU2EuNpIkL_WcxEqP3PfruOWQTY3zWBi8AErDDaOJ_gTWIHatWLb5NIkJfnUdWQZvglZBFSpI1F-uoZzdRn3BMr5A'
+              }}
+              className="w-full aspect-square rounded-xl mb-4"
+            />
+            <View className="gap-1">
+              <Text className="text-xl font-grotesk-bold text-[#121516]">
+                AquaStream 2000
+              </Text>
+              <Text className="text-sm text-[#6a7a81] font-grotesk-medium ">
+                Sleek design with efficient filtration
+              </Text>
+            </View>
+          </View>
+
+          <View className="w-60 mr-3">
+            <Image
+              source={{
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBNBVkUGo-P1Cn49C0apFDRFhH3FEfhPj9lIaTh4XbaXXH4eYrVP6_9e7X_LGqHv3ASpOHM9GT6_pMJRupSxbIu516Vuq2K6KqQQr9fju1EOogJ0YVMgInZQJcaugXC5M4lskeOalEKDEyeJLhHDbkyxfxaWw-dRPR0OMobgn6qkTQPz8OM09nbDjitcdYlEzSamox0r8fUcfG9JseVJ0-L-X5OLyJ0QZ2ttaUQcCoudZIUCD6YUXUEWxagjPbhChZAW7Nq-DrCcQ'
+              }}
+              className="w-full aspect-square rounded-xl mb-4"
+            />
+            <View className="gap-1">
+              <Text className="text-xl font-grotesk-bold text-[#121516]">
+                AquaClear 1500
+              </Text>
+              <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
+                Compact and reliable water purification
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Coupons & Promotions */}
+        <Text className="text-3xl font-grotesk-bold text-[#121516] px-4 pb-3 pt-12">
+          Coupons & Promotions
+        </Text>
+        <View className="p-4">
+          <View className="flex-row items-stretch justify-between gap-4 rounded-xl">
+            <View className="flex-[2] gap-4">
+              <View className="gap-1">
+                <Text className="text-sm text-[#6a7a81] font-grotesk">
+                  Limited Time Offer
+                </Text>
+                <Text className="text-lg font-grotesk-bold text-[#121516]">
+                  Save 20% on Your Next Filter
+                </Text>
+                <Text className="text-sm text-[#6a7a81]">
+                  Use code: FRESH20 at checkout
+                </Text>
+              </View>
+              <TouchableOpacity className="bg-[#f1f3f4] px-4 py-2 rounded-full self-start">
+                <Text className="text-base font-grotesk-medium text-[#121516]">
+                  Shop Now
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Image
+              source={{
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
+              }}
+              className="flex-1 aspect-video rounded-xl"
+            />
+          </View>
+        </View>
+
+        {/* Recent Orders */}
+        <Text className="text-3xl font-grotesk-bold text-[#121516] px-4 pb-3 pt-12">
+          Recent Orders
+        </Text>
+        <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2 justify-between">
+          <View className="flex-row items-center gap-4 flex-1">
+            <Image
+              source={{
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDyuD6GlTZZZ4SQvHg0-62JIJmqTDuuPF-tVHvzRzo_-7yul5lWf4hiN70nSjm7nG3YM-omO75OH92qvXF4GIQahgmf8v-VNZyfqAHhgYdayp8SF0oylIJL3YGpP46selz8EfiZcz3oxMnArNetdf6PlYbkUIihyng2CedG1WoUE5Xj-nZShfU_jM7fNsTHnHLnmGH_oa4B7zI1eojI0Asd_aJ9CR90pp--joGufu2Gn-Nl465pMjgIFJ6FEmqRvOHLW0Dc88-OaQ'
+              }}
+              className="w-14 h-14 rounded-lg"
+            />
+            <View className="flex-1 justify-center gap-0.5">
+              <Text className="text-xl font-grotesk-bold text-[#121516] leading-normal">
+                AquaPure 3000
+              </Text>
+              <Text className="text-base text-[#6a7a81] font-grotesk-medium leading-normal">
+                Order #123456
+              </Text>
+            </View>
+          </View>
+          <Text className="text-xl font-grotesk-bold text-[#121516]">$199</Text>
+        </View>
+      </ScrollView>
+
+
+    </SafeAreaView>
+  );
+};
+
+export default AquaHomeApp;
