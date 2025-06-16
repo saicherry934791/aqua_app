@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'reac
 import { ArrowLeft, Search, ChevronDown, Home, Grid3x3, ShoppingCart, User } from 'lucide-react-native';
 import { Link, useNavigation } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
 
 const ProductsScreen = () => {
 
@@ -143,7 +144,8 @@ const ProductsScreen = () => {
 
                   <TouchableOpacity key={product.id} className="w-[48%] mb-6" onPress={() => navigation.navigate('products/[id]', { id: product.id })}>
                     <View className="mb-3">
-                      <Image
+                      <Animated.Image
+                        sharedTransitionTag='productImage'
                         source={{ uri: product.image }}
                         className="w-full aspect-square rounded-xl"
                         resizeMode="cover"

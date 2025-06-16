@@ -125,7 +125,7 @@ export default function AquaHomeProductScreen() {
                     contentContainerStyle={{ paddingBottom: 120 }}
                 >
                     {/* Banner Image Carousel */}
-                    <Animated.View style={headerAnimatedStyle} className=" mb-6">
+                    <Animated.View sharedTransitionTag='productImage' style={headerAnimatedStyle} className=" mb-6">
                         <Animated.ScrollView
                             horizontal
                             pagingEnabled

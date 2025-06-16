@@ -2,10 +2,9 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, Text, View } from 'react-native';
 import {
-  Home,
-  HomeIcon,
   Grid3X3,
   Grid3X3Icon,
+  Home,
   ShoppingCart,
   ShoppingCartIcon,
   User,
@@ -13,6 +12,14 @@ import {
 } from 'lucide-react-native';
 
 import { HapticTab } from '@/components/HapticTab';
+import HomeIcon from '@/components/icons/HomeIcon';
+import HomeActiveIcon from '@/components/icons/HomeActiveIcon';
+import ProductsActiveIcon from '@/components/icons/ProductsActiveIcon';
+import ProductsIcon from '@/components/icons/ProductsIcon';
+import ProfileActiveIcon from '@/components/icons/ProfileActiveIcon';
+import ProfileIcon from '@/components/icons/ProfileIcon';
+import OrdersIcon from '@/components/icons/OrdersIcon';
+import OrdersActiveIcon from '@/components/icons/OrdersActiveIcon';
 
 export default function TabLayout() {
   return (
@@ -58,9 +65,11 @@ export default function TabLayout() {
           headerShown: true,
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
-              <HomeIcon color={color} size={size || 24} />
+              <HomeActiveIcon />
+
             ) : (
-              <Home color={color} size={size || 24} />
+              <HomeIcon />
+
             ),
 
         }}
@@ -71,9 +80,9 @@ export default function TabLayout() {
           title: 'Products',
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
-              <Grid3X3Icon color={color} size={size || 24} />
+              <ProductsActiveIcon />
             ) : (
-              <Grid3X3 color={color} size={size || 24} />
+              <ProductsIcon />
             ),
         }}
       />
@@ -83,9 +92,9 @@ export default function TabLayout() {
           title: 'Orders',
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
-              <ShoppingCartIcon color={color} size={size || 24} />
+              <OrdersActiveIcon/>
             ) : (
-              <ShoppingCart color={color} size={size || 24} />
+              <OrdersIcon/>
             ),
         }}
       />
@@ -95,9 +104,9 @@ export default function TabLayout() {
           title: 'Account',
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
-              <UserIcon color={color} size={size || 24} />
+              <ProfileActiveIcon />
             ) : (
-              <User color={color} size={size || 24} />
+              <ProfileIcon />
             ),
         }}
       />
