@@ -1,8 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import '../global.css';
-import { useFonts } from 'expo-font';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -13,7 +13,7 @@ import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
-import { View } from 'react-native';
+import { SheetProvider } from 'react-native-actions-sheet';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -32,69 +32,72 @@ export default function RootLayout() {
 
   return (
 
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false, headerShadowVisible: false }} />
-        <Stack.Screen name="+not-found" />
-        <Stack.Screen
-          name="products/[id]"
+    <SheetProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false, headerShadowVisible: false }} />
+          <Stack.Screen name="+not-found" />
+          <Stack.Screen
+            name="products/[id]"
 
 
-          options={{
-            title: "Product Details",
-            presentation: 'modal',
-            // headerTitle: () => <ModalHeaderText />,
+            options={{
+              title: "Product Details",
+              presentation: 'modal',
+              // headerTitle: () => <ModalHeaderText />,
 
-            // headerBackTitleVisible: false,
-            // headerTintColor: Colors.dark.text,
-            headerStyle: {
-              backgroundColor: '#fff'
+              // headerBackTitleVisible: false,
+              // headerTintColor: Colors.dark.text,
+              headerStyle: {
+                backgroundColor: '#fff'
 
-            },
-            headerShown: true
-          }}
+              },
+              headerShown: true
+            }}
 
-        />
-        <Stack.Screen
-          name="orders/[id]"
-          options={{
-            title: "Order Details",
+          />
+          <Stack.Screen
+            name="orders/[id]"
+            options={{
+              title: "Order Details",
 
-            headerStyle: {
-              backgroundColor: '#fff'
+              headerStyle: {
+                backgroundColor: '#fff'
 
-            },
-            headerShown: true,
-            headerShadowVisible: false
-          }}
-        />
-        <Stack.Screen
-          name="services/[id]"
-          options={{
-            title: "Service Details",
-            headerStyle: {
-              backgroundColor: '#fff'
+              },
+              headerShown: true,
+              headerShadowVisible: false
+            }}
+          />
+          <Stack.Screen
+            name="services/[id]"
+            options={{
+              title: "Service Details",
+              headerStyle: {
+                backgroundColor: '#fff'
 
-            },
-            headerShown: true,
-            headerShadowVisible: false
-          }}
-        />
-        <Stack.Screen
-          name="subscriptions/[id]"
-          options={{
-            title: "Subscription Details",
-            headerShadowVisible: false,
-            headerStyle: {
-              backgroundColor: '#fff'
+              },
+              headerShown: true,
+              headerShadowVisible: false
+            }}
+          />
+          <Stack.Screen
+            name="subscriptions/[id]"
+            options={{
+              title: "Subscription Details",
+              headerShadowVisible: false,
+              headerStyle: {
+                backgroundColor: '#fff'
 
-            },
-            headerShown: true
-          }}
-        />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+              },
+              headerShown: true
+            }}
+          />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SheetProvider>
 
   );
 }

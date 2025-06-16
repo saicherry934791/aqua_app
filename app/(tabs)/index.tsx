@@ -134,7 +134,35 @@ const AquaHomeApp = () => {
               source={{
                 uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
               }}
-              className="flex-1 aspect-video rounded-xl"
+              className="flex-1 h-full rounded-xl"
+            />
+          </View>
+        </View>
+        <View className="p-4">
+          <View className="flex-row items-stretch justify-between gap-4 rounded-xl">
+            <View className="flex-[2] gap-4">
+              <View className="gap-1">
+                <Text className="text-sm text-[#6a7a81] font-grotesk">
+                  Limited Time Offer
+                </Text>
+                <Text className="text-lg font-grotesk-bold text-[#121516]">
+                  Save 20% on Your Next Filter
+                </Text>
+                <Text className="text-sm text-[#6a7a81]">
+                  Use code: FRESH20 at checkout
+                </Text>
+              </View>
+              <TouchableOpacity className="bg-[#f1f3f4] px-4 py-2 rounded-full self-start">
+                <Text className="text-base font-grotesk-medium text-[#121516]">
+                  Shop Now
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Image
+              source={{
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
+              }}
+              className="flex-1 h-full rounded-xl"
             />
           </View>
         </View>
@@ -147,7 +175,7 @@ const AquaHomeApp = () => {
           <View className="flex-row items-center gap-4 flex-1">
             <Image
               source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDyuD6GlTZZZ4SQvHg0-62JIJmqTDuuPF-tVHvzRzo_-7yul5lWf4hiN70nSjm7nG3YM-omO75OH92qvXF4GIQahgmf8v-VNZyfqAHhgYdayp8SF0oylIJL3YGpP46selz8EfiZcz3oxMnArNetdf6PlYbkUIihyng2CedG1WoUE5Xj-nZShfU_jM7fNsTHnHLnmGH_oa4B7zI1eojI0Asd_aJ9CR90pp--joGufu2Gn-Nl465pMjgIFJ6FEmqRvOHLW0Dc88-OaQ'
+                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
               }}
               className="w-14 h-14 rounded-lg"
             />
