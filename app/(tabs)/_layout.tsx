@@ -20,19 +20,20 @@ import ProfileActiveIcon from '@/components/icons/ProfileActiveIcon';
 import ProfileIcon from '@/components/icons/ProfileIcon';
 import OrdersIcon from '@/components/icons/OrdersIcon';
 import OrdersActiveIcon from '@/components/icons/OrdersActiveIcon';
+import { useCart } from '@/contexts/CartContext';
 
 export default function TabLayout() {
+  const { state } = useCart();
+
   return (
     <Tabs
       screenOptions={{
-
         headerShown: true,
         headerStyle: {
           backgroundColor: 'white',
           shadowColor: 'transparent',
           elevation: 0,
           borderBottomWidth: 0,
-
         },
         tabBarButton: HapticTab,
         tabBarStyle: {
@@ -58,20 +59,15 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="index"
-
         options={{
           title: 'Home',
-
           headerShown: true,
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
               <HomeActiveIcon />
-
             ) : (
               <HomeIcon />
-
             ),
-
         }}
       />
       <Tabs.Screen
@@ -84,6 +80,41 @@ export default function TabLayout() {
             ) : (
               <ProductsIcon />
             ),
+        }}
+      />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          title: 'Cart',
+          tabBarIcon: ({ color, size, focused }) => (
+            <View style={{ position: 'relative' }}>
+              <ShoppingCart 
+                size={24} 
+                color={focused ? '#121516' : '#607e8a'} 
+              />
+              {state.itemCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  backgroundColor: '#ff4444',
+                  borderRadius: 10,
+                  minWidth: 20,
+                  height: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    color: 'white',
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                  }}>
+                    {state.itemCount > 99 ? '99+' : state.itemCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ),
         }}
       />
       <Tabs.Screen
