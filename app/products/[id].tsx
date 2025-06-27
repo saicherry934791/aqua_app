@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, ImageBackground, Dimensions, TouchableOpacity, Share } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -13,6 +13,8 @@ import { Svg, Path } from "react-native-svg";
 import { useNavigation } from "expo-router";
 import BackArrowIcon from "@/components/icons/BackArrowIcon";
 import { ShareIcon } from "lucide-react-native";
+import SkeletonWrapper from "@/components/skeltons/SkeletonWrapper";
+import ProductSkeleton from "@/components/skeltons/ProductSkeleton";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -31,6 +33,8 @@ export default function AquaHomeProductScreen() {
     const scrollY = useSharedValue(0);
     const addToCartScale = useSharedValue(1);
     const subscriptionScale = useSharedValue(1);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     const imageScrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => {
@@ -114,15 +118,40 @@ export default function AquaHomeProductScreen() {
         });
     }, [navigation]);
 
+    const fetchProduct = async () => {
+        try {
+            // Simulate network call
+            setLoading(true);
+            const res = await new Promise((resolve) =>
+                setTimeout(() => resolve({}), 1000)
+            );
+            //   setProducts(res);
+        } catch (err) {
+            console.error('Fetch failed', err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchProduct();
+    };
+
+    useEffect(() => {
+        fetchProduct();
+      }, []);
+
     return (
         <SafeAreaProvider>
             <SafeAreaView className="flex-1 ">
-                <Animated.ScrollView
-                    className="flex-1 bg-white "
-                    onScroll={mainScrollHandler}
-                    scrollEventThrottle={16}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 120 }}
+                <SkeletonWrapper
+                    loading={loading}
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    skeleton={<ProductSkeleton />}
+                    style={{ paddingBottom: 120 }}
                 >
                     {/* Banner Image Carousel */}
                     <Animated.View sharedTransitionTag='productImage' style={headerAnimatedStyle} className=" mb-6">
@@ -133,15 +162,7 @@ export default function AquaHomeProductScreen() {
                             onScroll={imageScrollHandler}
                             scrollEventThrottle={16}
                         >
-                            {/* <View className="flex flex-row  gap-2 p-5 absolute bottom-0 left-0 right-0 z-10 bg-red-500  items-center justify-center">
-                                {productImages.map((_, dotIndex) => (
-                                    <View
-                                        key={dotIndex}
-                                        className={`w-1.5 h-1.5 rounded-full bg-green-500 ${dotIndex === currentImageIndex ? 'opacity-100' : 'opacity-50'
-                                            }`}
-                                    />
-                                ))}
-                            </View> */}
+
                             {productImages.map((imageUri, index) => (
                                 <ImageBackground
                                     key={index}
@@ -233,7 +254,7 @@ export default function AquaHomeProductScreen() {
                         </View>
 
                     </View>
-                </Animated.ScrollView>
+                </SkeletonWrapper>
 
                 {/* Sticky CTA Buttons */}
                 <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-[#dde2e3] shadow-lg px-4">

@@ -35,8 +35,13 @@ export default function RootLayout() {
     <SheetProvider>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
-          <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false, headerShadowVisible: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, headerShadowVisible: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
+
+
+          <Stack.Screen name="OnboardDetails" options={{ headerShown: false }} />
+          
           <Stack.Screen name="+not-found" />
           <Stack.Screen
             name="products/[id]"
@@ -44,7 +49,8 @@ export default function RootLayout() {
 
             options={{
               title: "Product Details",
-              presentation: 'modal',
+
+
               // headerTitle: () => <ModalHeaderText />,
 
               // headerBackTitleVisible: false,
