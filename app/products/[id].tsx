@@ -12,7 +12,7 @@ import Animated, {
 import { Svg, Path } from "react-native-svg";
 import { useNavigation, useRouter } from "expo-router";
 import BackArrowIcon from "@/components/icons/BackArrowIcon";
-import { ShareIcon, ShoppingCart } from "lucide-react-native";
+import { Share as ShareIcon, ShoppingCart } from "lucide-react-native";
 import SkeletonWrapper from "@/components/skeltons/SkeletonWrapper";
 import ProductSkeleton from "@/components/skeltons/ProductSkeleton";
 import { useCart } from "@/contexts/CartContext";

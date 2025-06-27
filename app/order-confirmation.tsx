@@ -7,7 +7,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { CheckCircle, Package, Home, FileText } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, Package, Chrome as Home, FileText } from 'lucide-react-native';
 
 export default function OrderConfirmationScreen() {
   const navigation = useNavigation();
