@@ -48,6 +48,33 @@ const MOCK_PRODUCTS = [
     category: 'purifiers',
     inStock: true,
   },
+  {
+    id: '4',
+    name: 'AquaMax Elite',
+    description: 'Premium water purifier with smart monitoring',
+    price: 3999,
+    image: 'https://images.pexels.com/photos/1001897/pexels-photo-1001897.jpeg?auto=compress&cs=tinysrgb&w=800',
+    category: 'purifiers',
+    inStock: true,
+  },
+  {
+    id: '5',
+    name: 'AquaFlow Basic',
+    description: 'Entry-level water purification for small homes',
+    price: 999,
+    image: 'https://images.pexels.com/photos/3964736/pexels-photo-3964736.jpeg?auto=compress&cs=tinysrgb&w=800',
+    category: 'purifiers',
+    inStock: true,
+  },
+  {
+    id: '6',
+    name: 'AquaTech Smart',
+    description: 'IoT-enabled water purifier with app control',
+    price: 4999,
+    image: 'https://images.pexels.com/photos/2280571/pexels-photo-2280571.jpeg?auto=compress&cs=tinysrgb&w=800',
+    category: 'purifiers',
+    inStock: true,
+  },
 ];
 
 const MOCK_ORDERS = [
@@ -67,6 +94,58 @@ const MOCK_ORDERS = [
     status: 'delivered',
     orderDate: '2024-01-15',
     deliveryDate: '2024-01-20',
+  },
+  {
+    id: '2',
+    userId: '1',
+    items: [
+      {
+        productId: '2',
+        name: 'AquaStream 2000',
+        price: 1999,
+        quantity: 1,
+        image: 'https://images.pexels.com/photos/3768911/pexels-photo-3768911.jpeg?auto=compress&cs=tinysrgb&w=800',
+      }
+    ],
+    total: 1999,
+    status: 'shipped',
+    orderDate: '2024-01-20',
+    deliveryDate: '2024-01-25',
+  }
+];
+
+const MOCK_SERVICES = [
+  {
+    id: '1',
+    userId: '1',
+    type: 'maintenance',
+    description: 'Regular maintenance check for AquaPure Pro',
+    status: 'completed',
+    requestDate: '2024-01-10',
+    completionDate: '2024-01-12',
+  },
+  {
+    id: '2',
+    userId: '1',
+    type: 'filter_replacement',
+    description: 'Filter replacement for AquaStream 2000',
+    status: 'in_progress',
+    requestDate: '2024-01-18',
+    completionDate: null,
+  }
+];
+
+const MOCK_SUBSCRIPTIONS = [
+  {
+    id: '1',
+    userId: '1',
+    productId: '1',
+    productName: 'AquaPure Pro',
+    plan: 'monthly',
+    price: 299,
+    status: 'active',
+    startDate: '2024-01-01',
+    nextRenewal: '2024-02-01',
   }
 ];
 
@@ -94,7 +173,7 @@ class MockApiService {
     
     // Mock OTP verification (accept 123456 as valid OTP)
     if (otp === '123456') {
-      const isFirstTime = Math.random() > 0.5; // Randomly determine if first time user
+      const isFirstTime = Math.random() > 0.3; // 70% chance of being first time user
       
       const user = {
         id: '1',
@@ -214,6 +293,49 @@ class MockApiService {
     };
   }
 
+  // Service endpoints
+  async getServices(userId: string): Promise<ApiResponse> {
+    await this.delay(1000);
+    
+    const userServices = MOCK_SERVICES.filter(service => service.userId === userId);
+    
+    return {
+      success: true,
+      data: userServices,
+      message: 'Services fetched successfully',
+    };
+  }
+
+  async createServiceRequest(serviceData: any): Promise<ApiResponse> {
+    await this.delay(1500);
+    
+    const newService = {
+      id: Date.now().toString(),
+      ...serviceData,
+      status: 'pending',
+      requestDate: new Date().toISOString().split('T')[0],
+    };
+
+    return {
+      success: true,
+      data: newService,
+      message: 'Service request created successfully',
+    };
+  }
+
+  // Subscription endpoints
+  async getSubscriptions(userId: string): Promise<ApiResponse> {
+    await this.delay(1000);
+    
+    const userSubscriptions = MOCK_SUBSCRIPTIONS.filter(sub => sub.userId === userId);
+    
+    return {
+      success: true,
+      data: userSubscriptions,
+      message: 'Subscriptions fetched successfully',
+    };
+  }
+
   // Generic request method for compatibility
   async request<T = any>(config: any): Promise<ApiResponse<T>> {
     const { method, url, data } = config;
@@ -237,6 +359,12 @@ class MockApiService {
       return this.getOrders('1'); // Mock user ID
     } else if (url.includes('/orders') && method === 'POST') {
       return this.createOrder(data);
+    } else if (url.includes('/services') && method === 'GET') {
+      return this.getServices('1'); // Mock user ID
+    } else if (url.includes('/services') && method === 'POST') {
+      return this.createServiceRequest(data);
+    } else if (url.includes('/subscriptions') && method === 'GET') {
+      return this.getSubscriptions('1'); // Mock user ID
     }
 
     // Default response for unhandled endpoints
