@@ -155,10 +155,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
+      // Call mock logout API
+      await mockApiService.logout();
+      
+      // Clear local storage
       await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userProfile']);
+      
+      // Update state
       dispatch({ type: 'LOGOUT' });
+      
+      console.log('User logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
+      // Even if API call fails, clear local data
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'userProfile']);
+      dispatch({ type: 'LOGOUT' });
     }
   };
 

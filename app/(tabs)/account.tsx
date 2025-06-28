@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { Path, Svg } from 'react-native-svg';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfileScreen() {
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [logoutLoading, setLogoutLoading] = useState(false);
     
     // Profile data state
     const [profileData, setProfileData] = useState({
@@ -35,6 +37,8 @@ export default function ProfileScreen() {
     const [keyboardType, setKeyboardType] = useState('default');
 
     const navigation = useNavigation();
+    const router = useRouter();
+    const { logout, state } = useAuth();
     const editActionSheetRef = useRef<ActionSheetRef>(null);
 
     useLayoutEffect(() => {
@@ -100,9 +104,53 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleLogout = () => {
+        Alert.alert(
+            'Logout',
+            'Are you sure you want to logout?',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Logout',
+                    style: 'destructive',
+                    onPress: performLogout,
+                },
+            ]
+        );
+    };
+
+    const performLogout = async () => {
+        try {
+            setLogoutLoading(true);
+            
+            // Simulate API call for logout
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Call logout from auth context
+            await logout();
+            
+            // Navigate to auth screen
+            router.replace('/(auth)');
+            
+        } catch (error) {
+            Alert.alert('Error', 'Failed to logout. Please try again.');
+        } finally {
+            setLogoutLoading(false);
+        }
+    };
+
     const EditIcon = () => (
         <Svg width={16} height={16} viewBox="0 0 256 256" fill="#687b82">
             <Path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96A16,16,0,0,0,227.31,73.37ZM92.69,208H48V163.31L136,75.31,180.69,120ZM192,108.69,147.31,64l24-24L216,84.69Z" />
+        </Svg>
+    );
+
+    const LogoutIcon = () => (
+        <Svg width={24} height={24} viewBox="0 0 256 256" fill="#ff4444">
+            <Path d="M112,216a8,8,0,0,1-8,8H48a16,16,0,0,1-16-16V48A16,16,0,0,1,48,32h56a8,8,0,0,1,0,16H48V208h56A8,8,0,0,1,112,216Zm109.66-93.66-40-40a8,8,0,0,0-11.32,11.32L196.69,120H104a8,8,0,0,0,0,16h92.69l-26.35,26.34a8,8,0,0,0,11.32,11.32l40-40A8,8,0,0,0,221.66,122.34Z" />
         </Svg>
     );
 
@@ -123,7 +171,7 @@ export default function ProfileScreen() {
                             <View className="flex-col items-center justify-center">
                                 <View className="flex-row items-center gap-2">
                                     <Text className="text-[#121517] text-3xl font-grotesk-bold text-center">
-                                        {profileData.name}
+                                        {state.user?.name || profileData.name}
                                     </Text>
                                     <TouchableOpacity
                                         onPress={() => openEditSheet('name', 'Full Name')}
@@ -155,7 +203,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Email</Text>
                         <Text style={{ color: '#697A82' }} className="text-base font-grotesk">
-                            {profileData.email}
+                            {state.user?.email || profileData.email}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -175,7 +223,7 @@ export default function ProfileScreen() {
                     </View>
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Phone</Text>
-                        <Text className="text-[#687b82] text-sm">{profileData.phone}</Text>
+                        <Text className="text-[#687b82] text-sm">{state.user?.phone || profileData.phone}</Text>
                     </View>
                     <TouchableOpacity
                         onPress={() => openEditSheet('phone', 'Phone Number', 'phone-pad')}
@@ -195,7 +243,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Alternate Phone</Text>
                         <Text className="text-[#687b82] text-sm">
-                            {profileData.alternatePhone}
+                            {state.user?.alternatePhone || profileData.alternatePhone}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -216,7 +264,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Address</Text>
                         <Text className="text-[#687b82] text-sm">
-                            {profileData.address}
+                            {state.user?.address || profileData.address}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -276,6 +324,26 @@ export default function ProfileScreen() {
                         <Link href={{ pathname: '/orders' }} className='flex-row items-center justify-center'>
                             <Text className="text-[#121517] text-xl font-grotesk-medium flex-1">Manage Subscription</Text>
                         </Link>
+                    </View>
+                </TouchableOpacity>
+
+                {/* Logout */}
+                <TouchableOpacity 
+                    className="flex-row items-center gap-4 bg-white px-4 min-h-14 justify-between"
+                    onPress={handleLogout}
+                    disabled={logoutLoading}
+                >
+                    <View className="flex-row items-center gap-4 flex-1">
+                        <View className="w-10 h-10 items-center justify-center rounded-lg bg-[#fef2f2]">
+                            {logoutLoading ? (
+                                <ActivityIndicator size="small" color="#ff4444" />
+                            ) : (
+                                <LogoutIcon />
+                            )}
+                        </View>
+                        <Text className="text-[#ff4444] text-xl font-grotesk-medium flex-1">
+                            {logoutLoading ? 'Logging out...' : 'Logout'}
+                        </Text>
                     </View>
                 </TouchableOpacity>
             </ScrollView>

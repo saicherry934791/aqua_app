@@ -221,6 +221,32 @@ class MockApiService {
     };
   }
 
+  async logout(): Promise<ApiResponse> {
+    await this.delay(1000);
+    
+    // Mock logout API call
+    console.log('Mock logout API called');
+    
+    return {
+      success: true,
+      data: { message: 'Logged out successfully' },
+      message: 'You have been logged out successfully',
+    };
+  }
+
+  async updateProfile(userId: string, profileData: any): Promise<ApiResponse> {
+    await this.delay(1500);
+    
+    // Mock profile update
+    console.log('Mock profile update:', profileData);
+    
+    return {
+      success: true,
+      data: { ...profileData, id: userId },
+      message: 'Profile updated successfully',
+    };
+  }
+
   async refreshToken(refreshToken: string): Promise<ApiResponse> {
     await this.delay(500);
     
@@ -347,8 +373,12 @@ class MockApiService {
       return this.verifyOTP(data.phone, data.otp);
     } else if (url.includes('/auth/complete-profile')) {
       return this.completeProfile(data);
+    } else if (url.includes('/auth/logout')) {
+      return this.logout();
     } else if (url.includes('/auth/refresh')) {
       return this.refreshToken(data.refreshToken);
+    } else if (url.includes('/profile/update')) {
+      return this.updateProfile(data.userId, data);
     } else if (url.includes('/products') && method === 'GET') {
       if (url.includes('/products/')) {
         const id = url.split('/').pop();
