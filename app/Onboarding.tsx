@@ -1,5 +1,5 @@
-import {StyleSheet, Text, View, useWindowDimensions} from 'react-native';
-import React from 'react';
+import React, { useLayoutEffect } from 'react';
+import { StyleSheet, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
@@ -7,40 +7,53 @@ import Animated, {
   useAnimatedStyle,
   interpolate,
   Extrapolation,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
-import Pagination from '@/components/onboarding/Pagination';
-import CustomButton from '@/components/onboarding/CustomButton';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 const data = [
-    {
-      id: 1,
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuD48RUwaW4YfZOFOIqLfmZ3ZYqn_a3_TG_zMQCQxpWMWM8uZjyFTPdYceiIaElYwrUY9IW6HaqfqkcLe6Or1nmwrrX_UMuBlm5PsCYbCcNYwo8PT_h9I_UJAwlTOuUqkfOGl-f2yTyXL48APPhr8sf0wtdrJ_yFzAZsY2U0BHlqREvsPzSl6jPC7nJyyDHq8Fv7jJQYQpoZu5JNzFJJtpuXfwqzbggSNJUIGx__6-mnDnBPhfZ9w8-C5W1b5mtjFAQvXrbPC-EpIg",
-      title: 'Enjoy pure water for a healthy life',
-      text: " AquaHome delivers pure, filtered water directly to your home, ensuring your family's health and well-being",
-    },
-    {
-      id: 2,
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBw_5Kt3K-0db1n_0lNI5f8f_3fnIKkDkc4FKNzyMeCe6Wy9H0qPfTHjyKCbARn-Wqtz0rhgpURuFf3kNUvRaolNOGSuVY2phKUXjTdrvk06n3GBlk1Lc9OtAP_t6_toGh27eOKmrvwXYb5Kv3PX0p5vfpGBJQ0RO2yxkp6gCTRa36ZHSyBKj7SwApA492mkj-mu2CyRnmUyq9eBpED5lgY25-IhnIuNgOogbC1w9IYjNlSPfAfqpNiB1-0MvhepLBwQk0CPJbwlg",
-      title: 'Effortless Subscription Management',
-      text: 'Easily manage your AquaHome subscription, including pausing, resuming, or changing your plan, all within the app.',
-    },
-    {
-      id: 3,
-      image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAoQFcTQqIDR24pCVCNzrXLJCMVD_SysE1pYEjP1ruOdsx4LbKP5E9HUg05BPU13fWkjVVq-JOyr2bXyMjvP33c8Ek7MQTAaOifFR7-oqovRYusu_rBkJVVRlS3qsErk6vlPfPd7T_vu0AtCxtqzHjRYYdfZw-V8k2AEbyj5gF_4spGzJhOYxrotbP5TWuBmLVQb1nB3I4mt4HlXDyEoIx3FOQ-KG3es0QnYChS5-48aCxHb7jDv4zLUbtjVajJe0ekNasGyrcfZA",
-      title: 'Reliable Service & Support',
-      text: 'Our dedicated team is here to assist you with any questions or concerns. Enjoy peace of mind with our comprehensive maintenance and support features.',
-    },
-  ];
+  {
+    id: 1,
+    image: "https://images.pexels.com/photos/416528/pexels-photo-416528.jpeg?auto=compress&cs=tinysrgb&w=800",
+    title: 'Pure Water for Healthy Living',
+    text: "Experience crystal-clear, purified water delivered directly to your home. Our advanced filtration technology ensures every drop meets the highest quality standards.",
+  },
+  {
+    id: 2,
+    image: "https://images.pexels.com/photos/3768911/pexels-photo-3768911.jpeg?auto=compress&cs=tinysrgb&w=800",
+    title: 'Smart Subscription Management',
+    text: 'Effortlessly manage your water delivery schedule with our intelligent app. Pause, modify, or customize your subscription with just a few taps.',
+  },
+  {
+    id: 3,
+    image: "https://images.pexels.com/photos/4099354/pexels-photo-4099354.jpeg?auto=compress&cs=tinysrgb&w=800",
+    title: 'Reliable Service & Support',
+    text: 'Our dedicated team ensures timely deliveries and provides 24/7 customer support. Enjoy peace of mind with our comprehensive service guarantee.',
+  },
+];
 
-const OnboardingScreen = () => {
-  const {width: SCREEN_WIDTH} = useWindowDimensions();
+export default function OnboardingScreen() {
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const flatListRef = useAnimatedRef(null);
   const x = useSharedValue(0);
   const flatListIndex = useSharedValue(0);
+  const navigation = useNavigation();
+  const router = useRouter();
+  const { completeOnboarding } = useAuth();
 
-  const onViewableItemsChanged = ({viewableItems}) => {
-    flatListIndex.value = viewableItems[0].index;
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
+  const onViewableItemsChanged = ({ viewableItems }) => {
+    if (viewableItems[0]?.index !== null) {
+      flatListIndex.value = viewableItems[0].index;
+    }
   };
 
   const onScroll = useAnimatedScrollHandler({
@@ -49,8 +62,20 @@ const OnboardingScreen = () => {
     },
   });
 
-  // eslint-disable-next-line react/no-unstable-nested-components
-  const RenderItem = ({item, index}) => {
+  const handleGetStarted = async () => {
+    await completeOnboarding();
+    router.replace('/(auth)');
+  };
+
+  const handleNext = () => {
+    if (flatListIndex.value < data.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: flatListIndex.value + 1 });
+    } else {
+      handleGetStarted();
+    }
+  };
+
+  const RenderItem = ({ item, index }) => {
     const imageAnimationStyle = useAnimatedStyle(() => {
       const opacityAnimation = interpolate(
         x.value,
@@ -74,11 +99,12 @@ const OnboardingScreen = () => {
       );
       return {
         opacity: opacityAnimation,
-        width: SCREEN_WIDTH ,
-        height: SCREEN_WIDTH ,
-        transform: [{translateY: translateYAnimation}],
+        width: SCREEN_WIDTH,
+        height: SCREEN_WIDTH * 0.8,
+        transform: [{ translateY: translateYAnimation }],
       };
     });
+
     const textAnimationStyle = useAnimatedStyle(() => {
       const opacityAnimation = interpolate(
         x.value,
@@ -103,17 +129,96 @@ const OnboardingScreen = () => {
 
       return {
         opacity: opacityAnimation,
-        transform: [{translateY: translateYAnimation}],
+        transform: [{ translateY: translateYAnimation }],
       };
     });
+
     return (
-      <View style={[styles.itemContainer, {width: SCREEN_WIDTH}]}>
-        <Animated.Image source={{uri:item.image}} style={imageAnimationStyle} />
-        <Animated.View style={textAnimationStyle}>
+      <View style={[styles.itemContainer, { width: SCREEN_WIDTH }]}>
+        <Animated.Image 
+          source={{ uri: item.image }} 
+          style={[imageAnimationStyle, styles.image]} 
+          resizeMode="cover"
+        />
+        <Animated.View style={[textAnimationStyle, styles.textContainer]}>
           <Text style={styles.itemTitle}>{item.title}</Text>
           <Text style={styles.itemText}>{item.text}</Text>
         </Animated.View>
       </View>
+    );
+  };
+
+  const PaginationComponent = () => {
+    return (
+      <View style={styles.paginationContainer}>
+        {data.map((_, i) => {
+          const animatedDotStyle = useAnimatedStyle(() => {
+            const widthAnimation = interpolate(
+              x.value,
+              [(i - 1) * SCREEN_WIDTH, i * SCREEN_WIDTH, (i + 1) * SCREEN_WIDTH],
+              [10, 20, 10],
+              Extrapolation.CLAMP,
+            );
+            const opacityAnimation = interpolate(
+              x.value,
+              [(i - 1) * SCREEN_WIDTH, i * SCREEN_WIDTH, (i + 1) * SCREEN_WIDTH],
+              [0.5, 1, 0.5],
+              Extrapolation.CLAMP,
+            );
+            return {
+              width: widthAnimation,
+              opacity: opacityAnimation,
+            };
+          });
+          return <Animated.View key={i} style={[styles.dots, animatedDotStyle]} />;
+        })}
+      </View>
+    );
+  };
+
+  const CustomButton = () => {
+    const buttonAnimationStyle = useAnimatedStyle(() => {
+      return {
+        width: flatListIndex.value === data.length - 1 ? withSpring(140) : withSpring(60),
+        height: 60,
+      };
+    });
+
+    const arrowAnimationStyle = useAnimatedStyle(() => {
+      return {
+        width: 30,
+        height: 30,
+        opacity: flatListIndex.value === data.length - 1 ? withTiming(0) : withTiming(1),
+        transform: [
+          {
+            translateX: flatListIndex.value === data.length - 1 ? withTiming(100) : withTiming(0),
+          },
+        ],
+      };
+    });
+
+    const textAnimationStyle = useAnimatedStyle(() => {
+      return {
+        opacity: flatListIndex.value === data.length - 1 ? withTiming(1) : withTiming(0),
+        transform: [
+          {
+            translateX: flatListIndex.value === data.length - 1 ? withTiming(0) : withTiming(-100),
+          },
+        ],
+      };
+    });
+
+    return (
+      <TouchableOpacity onPress={handleNext}>
+        <Animated.View style={[styles.buttonContainer, buttonAnimationStyle]}>
+          <Animated.Text style={[styles.arrow, arrowAnimationStyle]}>
+            →
+          </Animated.Text>
+          <Animated.Text style={[styles.textButton, textAnimationStyle]}>
+            Get Started
+          </Animated.Text>
+        </Animated.View>
+      </TouchableOpacity>
     );
   };
 
@@ -123,10 +228,8 @@ const OnboardingScreen = () => {
         ref={flatListRef}
         onScroll={onScroll}
         data={data}
-        renderItem={({item, index}) => {
-          return <RenderItem item={item} index={index} />;
-        }}
-        keyExtractor={item => item.id}
+        renderItem={({ item, index }) => <RenderItem item={item} index={index} />}
+        keyExtractor={item => item.id.toString()}
         scrollEventThrottle={16}
         horizontal={true}
         bounces={false}
@@ -139,46 +242,45 @@ const OnboardingScreen = () => {
         }}
       />
       <View style={styles.bottomContainer}>
-        <Pagination data={data} x={x} screenWidth={SCREEN_WIDTH} />
-        <CustomButton
-          flatListRef={flatListRef}
-          flatListIndex={flatListIndex}
-          dataLength={data.length}
-        />
+        <PaginationComponent />
+        <CustomButton />
       </View>
     </SafeAreaView>
   );
-};
-
-export default OnboardingScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
- 
     backgroundColor: '#fff',
   },
   itemContainer: {
     flex: 1,
-    // justifyContent: 'space-around',
-    // alignItems: 'center',
-    // backgroundColor: 'red',
-    // backgroundColor: '#4fa3c4',
-    gap: 20,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  image: {
+    borderRadius: 20,
+    marginHorizontal: 20,
+  },
+  textContainer: {
+    paddingHorizontal: 35,
+    alignItems: 'center',
   },
   itemTitle: {
     textAlign: 'center',
-    fontSize: 36,
-    marginBottom: 10,
-    color: 'black',
+    fontSize: 32,
+    marginBottom: 16,
+    color: '#121516',
     fontFamily: 'SpaceGrotesk_700Bold',
+    lineHeight: 38,
   },
   itemText: {
     textAlign: 'center',
-    marginHorizontal: 35,
-    color: 'black',
-    lineHeight: 20,
-    fontSize: 18,
+    color: '#687b82',
+    lineHeight: 24,
+    fontSize: 16,
     fontFamily: 'SpaceGrotesk_400Regular',
   },
   bottomContainer: {
@@ -187,6 +289,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 20,
     paddingVertical: 20,
-    
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dots: {
+    height: 10,
+    backgroundColor: '#4fa3c4',
+    marginHorizontal: 10,
+    borderRadius: 5,
+  },
+  buttonContainer: {
+    backgroundColor: '#4fa3c4',
+    padding: 10,
+    borderRadius: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  arrow: {
+    position: 'absolute',
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  textButton: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    position: 'absolute',
+    fontFamily: 'SpaceGrotesk_600SemiBold',
   },
 });
