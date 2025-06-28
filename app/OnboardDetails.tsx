@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,16 @@ import {
   ActivityIndicator,
   Platform,
   Dimensions,
+  FlatList,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRouter } from 'expo-router';
-import { MapPin, User, Phone, Mail, Navigation, Check, X } from 'lucide-react-native';
+import { MapPin, User, Phone, Mail, Navigation, Check, X, Search } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as Location from 'expo-location';
 import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 
 interface UserDetails {
   name: string;
@@ -26,6 +28,15 @@ interface UserDetails {
   address: string;
   latitude?: number;
   longitude?: number;
+}
+
+interface SearchResult {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
 }
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -40,12 +51,21 @@ export default function OnboardDetailsScreen() {
   const [pageLoading, setPageLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const [locationSelected, setLocationSelected] = useState(false);
-  const [mapRegion, setMapRegion] = useState({
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  const mapRef = useRef<MapView>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  
+  const [mapRegion, setMapRegion] = useState<Region>({
     latitude: 12.9716, // Default to Bangalore
     longitude: 77.5946,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
+  
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails>({
     name: '',
@@ -105,6 +125,16 @@ export default function OnboardDetailsScreen() {
     return true;
   };
 
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('Error requesting location permission:', error);
+      return false;
+    }
+  };
+
   const getCurrentLocation = async () => {
     try {
       setLocationLoading(true);
@@ -115,19 +145,7 @@ export default function OnboardDetailsScreen() {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
               const { latitude, longitude } = position.coords;
-              
-              // Use reverse geocoding to get address
-              await reverseGeocode(latitude, longitude);
-              
-              setMapRegion({
-                latitude,
-                longitude,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              });
-              
-              setSelectedLocation({ latitude, longitude });
-              setLocationSelected(true);
+              await handleLocationUpdate(latitude, longitude);
               setLocationLoading(false);
               Alert.alert('Success', 'Current location detected and address updated!');
             },
@@ -146,8 +164,8 @@ export default function OnboardDetailsScreen() {
       }
       
       // Request permission for mobile
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const hasPermission = await requestLocationPermission();
+      if (!hasPermission) {
         Alert.alert('Permission Denied', 'Location permission is required to get your current address');
         setLocationLoading(false);
         return;
@@ -159,18 +177,7 @@ export default function OnboardDetailsScreen() {
       });
       const { latitude, longitude } = location.coords;
 
-      // Reverse geocode to get address
-      await reverseGeocode(latitude, longitude);
-      
-      setMapRegion({
-        latitude,
-        longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
-      
-      setSelectedLocation({ latitude, longitude });
-      setLocationSelected(true);
+      await handleLocationUpdate(latitude, longitude);
       Alert.alert('Success', 'Location detected successfully!');
     } catch (error) {
       console.error('Error getting location:', error);
@@ -178,6 +185,22 @@ export default function OnboardDetailsScreen() {
     } finally {
       setLocationLoading(false);
     }
+  };
+
+  const handleLocationUpdate = async (latitude: number, longitude: number) => {
+    // Update map region
+    const newRegion = {
+      latitude,
+      longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    setMapRegion(newRegion);
+    setSelectedLocation({ latitude, longitude });
+    setLocationSelected(true);
+
+    // Reverse geocode to get address
+    await reverseGeocode(latitude, longitude);
   };
 
   const reverseGeocode = async (latitude: number, longitude: number) => {
@@ -244,23 +267,95 @@ export default function OnboardDetailsScreen() {
     }
   };
 
+  const searchPlaces = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM&components=country:in`
+      );
+      const data = await response.json();
+      
+      if (data.predictions) {
+        setSearchResults(data.predictions);
+        setShowSearchResults(true);
+      }
+    } catch (error) {
+      console.error('Error searching places:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const handleSearchQueryChange = (text: string) => {
+    setSearchQuery(text);
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout for search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchPlaces(text);
+    }, 500);
+  };
+
+  const selectSearchResult = async (result: SearchResult) => {
+    try {
+      setSearchQuery(result.description);
+      setShowSearchResults(false);
+      Keyboard.dismiss();
+      
+      // Get place details
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=geometry&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
+      );
+      const data = await response.json();
+      
+      if (data.result?.geometry?.location) {
+        const { lat, lng } = data.result.geometry.location;
+        await handleLocationUpdate(lat, lng);
+        
+        // Animate map to new location
+        if (mapRef.current) {
+          mapRef.current.animateToRegion({
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }, 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Error selecting search result:', error);
+    }
+  };
+
   const openMapPicker = () => {
     setShowMap(true);
+    setSearchQuery('');
+    setShowSearchResults(false);
   };
 
   const handleMapPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
-    setSelectedLocation({ latitude, longitude });
+    await handleLocationUpdate(latitude, longitude);
     
-    // Update the map region to center on selected location
-    setMapRegion(prev => ({
-      ...prev,
-      latitude,
-      longitude,
-    }));
-    
-    // Reverse geocode the selected location
-    await reverseGeocode(latitude, longitude);
+    // Animate map to selected location
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 500);
+    }
   };
 
   const confirmMapSelection = () => {
@@ -293,6 +388,19 @@ export default function OnboardDetailsScreen() {
       setLoading(false);
     }
   };
+
+  const renderSearchResult = ({ item }: { item: SearchResult }) => (
+    <TouchableOpacity
+      style={styles.searchResultItem}
+      onPress={() => selectSearchResult(item)}
+    >
+      <MapPin size={16} color="#4fa3c4" style={styles.searchResultIcon} />
+      <View style={styles.searchResultText}>
+        <Text style={styles.searchResultMain}>{item.structured_formatting.main_text}</Text>
+        <Text style={styles.searchResultSecondary}>{item.structured_formatting.secondary_text}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   if (pageLoading) {
     return (
@@ -330,13 +438,44 @@ export default function OnboardDetailsScreen() {
               </TouchableOpacity>
               <View style={styles.mapTitleContainer}>
                 <Text style={styles.mapTitle}>Select Your Location</Text>
-                <Text style={styles.mapSubtitle}>Tap on the map to select your exact delivery location</Text>
+                <Text style={styles.mapSubtitle}>Search or tap on the map to select your delivery location</Text>
               </View>
+            </View>
+            
+            {/* Search Bar */}
+            <View style={styles.mapSearchContainer}>
+              <View style={styles.mapSearchBar}>
+                <Search size={20} color="#687b82" />
+                <TextInput
+                  style={styles.mapSearchInput}
+                  placeholder="Search for places..."
+                  placeholderTextColor="#687b82"
+                  value={searchQuery}
+                  onChangeText={handleSearchQueryChange}
+                />
+                {isSearching && (
+                  <ActivityIndicator size="small" color="#4fa3c4" />
+                )}
+              </View>
+              
+              {/* Search Results */}
+              {showSearchResults && searchResults.length > 0 && (
+                <View style={styles.searchResultsContainer}>
+                  <FlatList
+                    data={searchResults}
+                    renderItem={renderSearchResult}
+                    keyExtractor={(item) => item.place_id}
+                    style={styles.searchResultsList}
+                    keyboardShouldPersistTaps="handled"
+                  />
+                </View>
+              )}
             </View>
           </View>
           
-          {/* Real Google Maps */}
+          {/* Map */}
           <MapView
+            ref={mapRef}
             style={styles.map}
             provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             region={mapRegion}
@@ -346,13 +485,14 @@ export default function OnboardDetailsScreen() {
             showsCompass={true}
             showsScale={true}
             mapType="standard"
+            onRegionChangeComplete={(region) => setMapRegion(region)}
           >
             {selectedLocation && (
               <Marker
                 coordinate={selectedLocation}
                 title="Selected Location"
                 description="Your delivery address"
-                pinColor="#ff4444"
+                pinColor="#4fa3c4"
               />
             )}
           </MapView>
@@ -756,6 +896,69 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   mapSubtitle: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+  },
+  mapSearchContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    position: 'relative',
+  },
+  mapSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f3f4',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  mapSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#121516',
+  },
+  searchResultsContainer: {
+    position: 'absolute',
+    top: 60,
+    left: 16,
+    right: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+    maxHeight: 200,
+  },
+  searchResultsList: {
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f4',
+  },
+  searchResultIcon: {
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+  },
+  searchResultMain: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_500Medium',
+    color: '#121516',
+    marginBottom: 2,
+  },
+  searchResultSecondary: {
     fontSize: 14,
     fontFamily: 'SpaceGrotesk_400Regular',
     color: '#687b82',
