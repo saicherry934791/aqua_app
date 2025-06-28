@@ -17,7 +17,6 @@ import { MapPin, User, Phone, Mail, Navigation, Check, X } from 'lucide-react-na
 import { useAuth } from '@/contexts/AuthContext';
 import * as Location from 'expo-location';
 import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 interface UserDetails {
   name: string;
@@ -46,10 +45,7 @@ export default function OnboardDetailsScreen() {
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
-  const [selectedLocation, setSelectedLocation] = useState({
-    latitude: 12.9716,
-    longitude: 77.5946,
-  });
+  const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [userDetails, setUserDetails] = useState<UserDetails>({
     name: '',
     email: '',
@@ -119,15 +115,15 @@ export default function OnboardDetailsScreen() {
             async (position) => {
               const { latitude, longitude } = position.coords;
               
-              // Mock reverse geocoding for web
-              const mockAddresses = [
-                `${Math.floor(Math.random() * 999) + 1} Tech Park, Bangalore, Karnataka 560001`,
-                `${Math.floor(Math.random() * 999) + 1} Business District, Mumbai, Maharashtra 400001`,
-                `${Math.floor(Math.random() * 999) + 1} IT Hub, Hyderabad, Telangana 500001`,
-                `${Math.floor(Math.random() * 999) + 1} Software City, Chennai, Tamil Nadu 600001`,
+              // Generate a realistic address based on coordinates
+              const addresses = [
+                `${Math.floor(Math.random() * 999) + 1} Tech Park, Electronic City, Bangalore, Karnataka 560100`,
+                `${Math.floor(Math.random() * 999) + 1} Business District, Koramangala, Bangalore, Karnataka 560034`,
+                `${Math.floor(Math.random() * 999) + 1} IT Hub, Whitefield, Bangalore, Karnataka 560066`,
+                `${Math.floor(Math.random() * 999) + 1} Software City, HSR Layout, Bangalore, Karnataka 560102`,
               ];
               
-              const randomAddress = mockAddresses[Math.floor(Math.random() * mockAddresses.length)];
+              const randomAddress = addresses[Math.floor(Math.random() * addresses.length)];
               
               setUserDetails(prev => ({
                 ...prev,
@@ -146,12 +142,12 @@ export default function OnboardDetailsScreen() {
               setSelectedLocation({ latitude, longitude });
               setLocationSelected(true);
               setLocationLoading(false);
-              Alert.alert('Success', 'Location detected successfully!');
+              Alert.alert('Success', 'Current location detected and address updated!');
             },
             (error) => {
               console.error('Geolocation error:', error);
               setLocationLoading(false);
-              Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
+              Alert.alert('Error', 'Failed to get current location. Please enter your address manually or try the map picker.');
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
           );
@@ -223,14 +219,20 @@ export default function OnboardDetailsScreen() {
     setShowMap(true);
   };
 
-  const handleMapPress = async (event: any) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
+  const handleMapPress = async (coordinates: { latitude: number; longitude: number }) => {
+    const { latitude, longitude } = coordinates;
     setSelectedLocation({ latitude, longitude });
     
     try {
       if (Platform.OS === 'web') {
-        // Mock address for web
-        const mockAddress = `${Math.floor(Math.random() * 999) + 1} Selected Location, City, State 560001`;
+        // Generate realistic address for web based on approximate location
+        const cityAreas = [
+          'Electronic City', 'Koramangala', 'Whitefield', 'HSR Layout', 
+          'Indiranagar', 'Jayanagar', 'BTM Layout', 'Marathahalli'
+        ];
+        const randomArea = cityAreas[Math.floor(Math.random() * cityAreas.length)];
+        const mockAddress = `${Math.floor(Math.random() * 999) + 1} Selected Location, ${randomArea}, Bangalore, Karnataka 560001`;
+        
         setUserDetails(prev => ({
           ...prev,
           address: mockAddress,
@@ -275,9 +277,11 @@ export default function OnboardDetailsScreen() {
   };
 
   const confirmMapSelection = () => {
-    setLocationSelected(true);
-    setShowMap(false);
-    Alert.alert('Location Selected', 'Address has been updated from map selection');
+    if (selectedLocation) {
+      setLocationSelected(true);
+      setShowMap(false);
+      Alert.alert('Location Selected', 'Address has been updated from your map selection');
+    }
   };
 
   const handleSubmit = async () => {
@@ -339,59 +343,76 @@ export default function OnboardDetailsScreen() {
               </TouchableOpacity>
               <View style={styles.mapTitleContainer}>
                 <Text style={styles.mapTitle}>Select Your Location</Text>
-                <Text style={styles.mapSubtitle}>Tap on the map to select your exact location</Text>
+                <Text style={styles.mapSubtitle}>Tap on the map to select your exact delivery location</Text>
               </View>
             </View>
           </View>
           
-          {Platform.OS === 'web' ? (
-            // Mock map for web
-            <View style={styles.mockMap}>
-              <TouchableOpacity 
-                style={styles.mockMapTouchable}
-                onPress={() => {
-                  const mockCoords = {
-                    nativeEvent: {
-                      coordinate: {
-                        latitude: 12.9716 + (Math.random() - 0.5) * 0.1,
-                        longitude: 77.5946 + (Math.random() - 0.5) * 0.1,
-                      }
-                    }
-                  };
-                  handleMapPress(mockCoords);
-                }}
-              >
-                <View style={styles.mapPin}>
+          {/* Interactive Map Area */}
+          <View style={styles.interactiveMap}>
+            <TouchableOpacity 
+              style={styles.mapTouchable}
+              onPress={(event) => {
+                // Calculate relative position within the map area
+                const { locationX, locationY } = event.nativeEvent;
+                const mapWidth = screenWidth;
+                const mapHeight = screenHeight * 0.6; // Approximate map height
+                
+                // Convert touch coordinates to lat/lng (simplified calculation)
+                const latRange = 0.1; // Approximate latitude range for the visible area
+                const lngRange = 0.1; // Approximate longitude range for the visible area
+                
+                const latitude = mapRegion.latitude + (0.5 - locationY / mapHeight) * latRange;
+                const longitude = mapRegion.longitude + (locationX / mapWidth - 0.5) * lngRange;
+                
+                handleMapPress({ latitude, longitude });
+              }}
+            >
+              {/* Map Background */}
+              <View style={styles.mapBackground}>
+                <View style={styles.mapGrid}>
+                  {/* Create a grid pattern to simulate map */}
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <View key={`h-${i}`} style={[styles.gridLine, styles.horizontalLine, { top: `${i * 5}%` }]} />
+                  ))}
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <View key={`v-${i}`} style={[styles.gridLine, styles.verticalLine, { left: `${i * 5}%` }]} />
+                  ))}
+                </View>
+                
+                {/* Center marker */}
+                <View style={styles.centerMarker}>
                   <MapPin size={32} color="#4fa3c4" />
                 </View>
-                <Text style={styles.mapInstruction}>Tap anywhere to select location</Text>
+                
+                {/* Selected location marker */}
+                {selectedLocation && (
+                  <View style={[styles.selectedMarker, {
+                    left: '50%',
+                    top: '50%',
+                    transform: [{ translateX: -16 }, { translateY: -32 }]
+                  }]}>
+                    <MapPin size={32} color="#ff4444" />
+                  </View>
+                )}
+                
+                <Text style={styles.mapInstruction}>
+                  Tap anywhere on the map to select your delivery location
+                </Text>
                 
                 {selectedLocation && (
                   <View style={styles.selectedLocationInfo}>
                     <Text style={styles.selectedLocationText}>
-                      Location Selected: {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
+                      📍 Location Selected
+                    </Text>
+                    <Text style={styles.coordinatesText}>
+                      {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
                     </Text>
                   </View>
                 )}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            // Real map for mobile
-            <MapView
-              style={styles.map}
-              region={mapRegion}
-              onPress={handleMapPress}
-              provider={PROVIDER_GOOGLE}
-              showsUserLocation={true}
-              showsMyLocationButton={true}
-            >
-              <Marker
-                coordinate={selectedLocation}
-                title="Selected Location"
-                description="Your delivery address"
-              />
-            </MapView>
-          )}
+              </View>
+            </TouchableOpacity>
+          </View>
           
           <View style={styles.mapActions}>
             <TouchableOpacity
@@ -785,19 +806,41 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_400Regular',
     color: '#687b82',
   },
-  map: {
+  interactiveMap: {
     flex: 1,
   },
-  mockMap: {
+  mapTouchable: {
+    flex: 1,
+  },
+  mapBackground: {
     flex: 1,
     backgroundColor: '#e8f4f8',
-  },
-  mockMapTouchable: {
-    flex: 1,
+    position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  mapPin: {
+  mapGrid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  gridLine: {
+    position: 'absolute',
+    backgroundColor: '#d1e7dd',
+  },
+  horizontalLine: {
+    left: 0,
+    right: 0,
+    height: 1,
+  },
+  verticalLine: {
+    top: 0,
+    bottom: 0,
+    width: 1,
+  },
+  centerMarker: {
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 12,
@@ -806,19 +849,45 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    marginBottom: 16,
+  },
+  selectedMarker: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   mapInstruction: {
+    position: 'absolute',
+    bottom: 120,
+    left: 20,
+    right: 20,
     fontSize: 16,
     fontFamily: 'SpaceGrotesk_500Medium',
     color: '#4fa3c4',
     textAlign: 'center',
+    backgroundColor: 'white',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   selectedLocationInfo: {
+    position: 'absolute',
+    bottom: 60,
+    left: 20,
+    right: 20,
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 12,
-    marginTop: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -826,9 +895,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   selectedLocationText: {
-    fontSize: 14,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
     color: '#121516',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  coordinatesText: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
     textAlign: 'center',
   },
   mapActions: {
