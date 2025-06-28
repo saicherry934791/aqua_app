@@ -95,7 +95,19 @@ export default function TabLayout() {
             ),
         }}
       />
-      
+      <Tabs.Screen
+        name="products"
+        options={{
+          title: 'Products',
+          headerRight: () => <CartHeaderButton />,
+          tabBarIcon: ({ color, size, focused }) =>
+            focused ? (
+              <ProductsActiveIcon />
+            ) : (
+              <ProductsIcon />
+            ),
+        }}
+      />
       <Tabs.Screen
         name="orders"
         options={{
