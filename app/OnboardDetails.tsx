@@ -15,6 +15,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { MapPin, User, Phone, Mail } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as Location from 'expo-location';
+import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
 
 interface UserDetails {
   name: string;
@@ -32,6 +33,7 @@ export default function OnboardDetailsScreen() {
   
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [userDetails, setUserDetails] = useState<UserDetails>({
     name: '',
     email: '',
@@ -47,6 +49,9 @@ export default function OnboardDetailsScreen() {
       headerTitleAlign: 'center',
       headerLeft: () => null, // Remove back button
     });
+    
+    // Simulate page loading
+    setTimeout(() => setPageLoading(false), 1000);
   }, [navigation]);
 
   const validateForm = () => {
@@ -91,6 +96,11 @@ export default function OnboardDetailsScreen() {
     try {
       setLocationLoading(true);
       
+      if (Platform.OS === 'web') {
+        Alert.alert('Info', 'Location services are not available on web. Please enter your address manually.');
+        return;
+      }
+      
       // Request permission
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -125,6 +135,8 @@ export default function OnboardDetailsScreen() {
           latitude,
           longitude,
         }));
+        
+        Alert.alert('Success', 'Location detected successfully!');
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -156,6 +168,28 @@ export default function OnboardDetailsScreen() {
       setLoading(false);
     }
   };
+
+  if (pageLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <LoadingSkeleton width="80%" height={32} style={styles.loadingTitle} />
+          <LoadingSkeleton width="90%" height={20} style={styles.loadingSubtitle} />
+          
+          <View style={styles.loadingForm}>
+            {[1, 2, 3, 4].map((_, index) => (
+              <View key={index} style={styles.loadingField}>
+                <LoadingSkeleton width="40%" height={16} style={styles.loadingLabel} />
+                <LoadingSkeleton width="100%" height={56} style={styles.loadingInput} />
+              </View>
+            ))}
+          </View>
+          
+          <LoadingSkeleton width="100%" height={56} borderRadius={28} style={styles.loadingButton} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -278,6 +312,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
+  },
+  loadingContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  loadingTitle: {
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  loadingSubtitle: {
+    marginBottom: 32,
+  },
+  loadingForm: {
+    flex: 1,
+    gap: 20,
+  },
+  loadingField: {
+    gap: 8,
+  },
+  loadingLabel: {
+    marginBottom: 8,
+  },
+  loadingInput: {
+    marginBottom: 16,
+  },
+  loadingButton: {
+    marginTop: 'auto',
+    marginBottom: 20,
   },
   headerTitle: {
     fontSize: 20,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiService } from '@/services/api';
+import { mockApiService } from '@/services/mockApi';
 
 export interface User {
   id: string;
@@ -8,6 +8,9 @@ export interface User {
   name: string;
   phone: string;
   address?: string;
+  alternatePhone?: string;
+  latitude?: number;
+  longitude?: number;
   isFirstTime?: boolean;
 }
 
@@ -96,6 +99,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         dispatch({ type: 'SET_USER', payload: user });
         dispatch({ type: 'SET_ONBOARDING_COMPLETED', payload: onboardingCompleted === 'true' });
         dispatch({ type: 'SET_DETAILS_COMPLETED', payload: !user.isFirstTime });
+      } else {
+        // Check if onboarding was completed even without auth
+        dispatch({ type: 'SET_ONBOARDING_COMPLETED', payload: onboardingCompleted === 'true' });
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -106,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const sendOTP = async (phone: string) => {
     try {
-      const response = await apiService.post('/auth/send-otp', { phone });
+      const response = await mockApiService.sendOTP(phone);
       return { success: response.success, error: response.error };
     } catch (error) {
       return { success: false, error: 'Failed to send OTP' };
@@ -115,7 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const loginWithOTP = async (phone: string, otp: string) => {
     try {
-      const response = await apiService.post('/auth/verify-otp', { phone, otp });
+      const response = await mockApiService.verifyOTP(phone, otp);
       
       if (response.success) {
         const { user, accessToken, refreshToken } = response.data;
@@ -140,24 +146,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await apiService.post('/auth/login', { email, password });
-      
-      if (response.success) {
-        const { user, accessToken, refreshToken } = response.data;
-        
-        await Promise.all([
-          AsyncStorage.setItem('accessToken', accessToken),
-          AsyncStorage.setItem('refreshToken', refreshToken),
-          AsyncStorage.setItem('userProfile', JSON.stringify(user)),
-        ]);
-
-        dispatch({ type: 'SET_USER', payload: user });
-        dispatch({ type: 'SET_DETAILS_COMPLETED', payload: !user.isFirstTime });
-        
-        return { success: true };
-      }
-      
-      return { success: false, error: response.error };
+      // For now, redirect to OTP login
+      return { success: false, error: 'Please use OTP login' };
     } catch (error) {
       return { success: false, error: 'Login failed' };
     }
@@ -183,7 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const completeUserDetails = async (details: Partial<User>) => {
     try {
-      const response = await apiService.put('/auth/complete-profile', details);
+      const response = await mockApiService.completeProfile(details);
       
       if (response.success) {
         const updatedUser = { ...state.user, ...details, isFirstTime: false };

@@ -5,29 +5,35 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    ActivityIndicator,
 } from 'react-native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const otp = () => {
-
+const OTPScreen = () => {
     const navigation = useNavigation();
+    const router = useRouter();
+    const { phone } = useLocalSearchParams();
+    const { loginWithOTP, sendOTP } = useAuth();
+    
+    const [otp, setOtp] = useState(['', '', '', '', '', '']);
+    const [isComplete, setIsComplete] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const inputRefs = useRef<(TextInput | null)[]>([]);
 
     useLayoutEffect(() => {
         navigation.setOptions({
             headerTitle: () => (
-
                 <Text className="text-2xl font-grotesk-bold text-[#121516]">Verify OTP</Text>
-
             ),
             headerTitleAlign: 'center',
             headerShadowVisible: false,
-            
         });
     }, [navigation]);
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
-    const [isComplete, setIsComplete] = useState(false);
-    const inputRefs = useRef([]);
 
     useEffect(() => {
         // Check if OTP is complete
@@ -35,45 +41,45 @@ const otp = () => {
         setIsComplete(otpString.length === 6 && /^\d{6}$/.test(otpString));
     }, [otp]);
 
-    const handleOtpChange = (value, index) => {
+    const handleOtpChange = (value: string, index: number) => {
         // Handle paste functionality - only allow on first input
         if (value.length > 1) {
-          if (index === 0) {
-            // Extract only digits and limit to 6
-            const pastedCode = value.replace(/[^0-9]/g, '').slice(0, 6);
-            const newOtp = Array(6).fill('');
-            
-            // Fill the array with pasted digits
-            for (let i = 0; i < Math.min(pastedCode.length, 6); i++) {
-              newOtp[i] = pastedCode[i];
+            if (index === 0) {
+                // Extract only digits and limit to 6
+                const pastedCode = value.replace(/[^0-9]/g, '').slice(0, 6);
+                const newOtp = Array(6).fill('');
+                
+                // Fill the array with pasted digits
+                for (let i = 0; i < Math.min(pastedCode.length, 6); i++) {
+                    newOtp[i] = pastedCode[i];
+                }
+                
+                setOtp(newOtp);
+                
+                // Focus management after paste
+                if (pastedCode.length >= 6) {
+                    inputRefs.current[5]?.blur();
+                } else if (pastedCode.length > 0) {
+                    inputRefs.current[Math.min(pastedCode.length, 5)]?.focus();
+                }
             }
-            
-            setOtp(newOtp);
-            
-            // Focus management after paste
-            if (pastedCode.length >= 6) {
-              inputRefs.current[5]?.blur();
-            } else if (pastedCode.length > 0) {
-              inputRefs.current[Math.min(pastedCode.length, 5)]?.focus();
-            }
-          }
-          return;
+            return;
         }
-    
+
         // Handle single digit input
         if (value.length <= 1 && (/^\d$/.test(value) || value === '')) {
-          const newOtp = [...otp];
-          newOtp[index] = value;
-          setOtp(newOtp);
-    
-          // Auto-focus next input
-          if (value !== '' && index < 5) {
-            inputRefs.current[index + 1]?.focus();
-          }
-        }
-      };
+            const newOtp = [...otp];
+            newOtp[index] = value;
+            setOtp(newOtp);
 
-    const handleKeyPress = (key, index) => {
+            // Auto-focus next input
+            if (value !== '' && index < 5) {
+                inputRefs.current[index + 1]?.focus();
+            }
+        }
+    };
+
+    const handleKeyPress = (key: string, index: number) => {
         if (key === 'Backspace') {
             if (otp[index] === '' && index > 0) {
                 // If current input is empty, focus previous and clear it
@@ -90,24 +96,51 @@ const otp = () => {
         }
     };
 
-    const handleVerifyOTP = () => {
+    const handleVerifyOTP = async () => {
         const otpString = otp.join('');
-        if (isComplete) {
-            Alert.alert('Success', `OTP ${otpString} verified successfully!`);
-            // Add your OTP verification logic here
-            navigation.navigate('OnboardDetails');
+        if (isComplete && phone) {
+            setLoading(true);
+            try {
+                const result = await loginWithOTP(phone as string, otpString);
+                if (result.success) {
+                    // Navigation will be handled by the auth context and index screen
+                    router.replace('/');
+                } else {
+                    Alert.alert('Error', result.error || 'Invalid OTP. Please try again.');
+                    // Clear OTP on error
+                    setOtp(['', '', '', '', '', '']);
+                    inputRefs.current[0]?.focus();
+                }
+            } catch (error) {
+                Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
-    const handleResendOTP = () => {
-        Alert.alert('OTP Resent', 'A new OTP has been sent to your phone number.');
-        // Clear current OTP
-        setOtp(['', '', '', '', '', '']);
-        inputRefs.current[0]?.focus();
-        // Add your resend OTP logic here
+    const handleResendOTP = async () => {
+        if (phone) {
+            setResendLoading(true);
+            try {
+                const result = await sendOTP(phone as string);
+                if (result.success) {
+                    Alert.alert('Success', 'A new OTP has been sent to your phone number.');
+                    // Clear current OTP
+                    setOtp(['', '', '', '', '', '']);
+                    inputRefs.current[0]?.focus();
+                } else {
+                    Alert.alert('Error', result.error || 'Failed to resend OTP');
+                }
+            } catch (error) {
+                Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+                setResendLoading(false);
+            }
+        }
     };
 
-    const renderOtpInput = (index) => (
+    const renderOtpInput = (index: number) => (
         <TextInput
             key={index}
             ref={(ref) => (inputRefs.current[index] = ref)}
@@ -123,14 +156,33 @@ const otp = () => {
             textAlign="center"
             selectTextOnFocus={true}
             blurOnSubmit={false}
+            editable={!loading}
         />
     );
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <LoadingSkeleton width="60%" height={32} style={styles.loadingTitle} />
+                    <LoadingSkeleton width="80%" height={20} style={styles.loadingDescription} />
+                    <View style={styles.otpContainer}>
+                        {Array(6).fill(0).map((_, index) => (
+                            <LoadingSkeleton key={index} width={48} height={56} borderRadius={12} />
+                        ))}
+                    </View>
+                    <LoadingSkeleton width="100%" height={48} borderRadius={24} style={styles.loadingButton} />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <Text style={styles.title}>Enter the code</Text>
 
             <Text style={styles.description}>
-                We sent a verification code to your phone number. Please enter it below.
+                We sent a verification code to +91 {phone}. Please enter it below.
             </Text>
 
             <View style={styles.otpContainer}>
@@ -143,17 +195,35 @@ const otp = () => {
                     isComplete ? styles.activeButton : styles.inactiveButton
                 ]}
                 onPress={handleVerifyOTP}
-                disabled={!isComplete}
+                disabled={!isComplete || loading}
             >
-                <Text style={styles.buttonText}>Verify OTP</Text>
+                {loading ? (
+                    <ActivityIndicator color="#111618" size="small" />
+                ) : (
+                    <Text style={styles.buttonText}>Verify OTP</Text>
+                )}
             </TouchableOpacity>
 
             <Text style={styles.didntReceiveText}>Didn't receive the code?</Text>
 
-            <TouchableOpacity onPress={handleResendOTP} style={styles.resendContainer}>
-                <Text style={styles.resendText}>Resend OTP</Text>
+            <TouchableOpacity 
+                onPress={handleResendOTP} 
+                style={styles.resendContainer}
+                disabled={resendLoading}
+            >
+                {resendLoading ? (
+                    <ActivityIndicator color="#607e8a" size="small" />
+                ) : (
+                    <Text style={styles.resendText}>Resend OTP</Text>
+                )}
             </TouchableOpacity>
-        </View>
+
+            <View style={styles.helpContainer}>
+                <Text style={styles.helpText}>
+                    For testing, use OTP: 123456
+                </Text>
+            </View>
+        </SafeAreaView>
     )
 }
 
@@ -162,6 +232,19 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: 'white',
         paddingHorizontal: 16,
+    },
+    loadingContainer: {
+        flex: 1,
+        paddingTop: 20,
+    },
+    loadingTitle: {
+        marginBottom: 16,
+    },
+    loadingDescription: {
+        marginBottom: 32,
+    },
+    loadingButton: {
+        marginTop: 32,
     },
     title: {
         color: '#111618',
@@ -233,6 +316,8 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingBottom: 12,
         paddingTop: 4,
+        minHeight: 40,
+        justifyContent: 'center',
     },
     resendText: {
         color: '#607e8a',
@@ -240,7 +325,21 @@ const styles = StyleSheet.create({
         textDecorationLine: 'underline',
         fontFamily: 'SpaceGrotesk_500Medium',
     },
+    helpContainer: {
+        alignItems: 'center',
+        paddingVertical: 24,
+        marginTop: 'auto',
+    },
+    helpText: {
+        color: '#4fa3c4',
+        fontSize: 14,
+        textAlign: 'center',
+        fontFamily: 'SpaceGrotesk_500Medium',
+        backgroundColor: '#e8f4f8',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
 });
 
-
-export default otp
+export default OTPScreen

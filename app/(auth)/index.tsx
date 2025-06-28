@@ -5,21 +5,28 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    ActivityIndicator,
 } from 'react-native';
 import React, { useLayoutEffect, useState } from 'react'
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useNavigation, useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
 
 const Login = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [loading, setLoading] = useState(false);
+    const navigation = useNavigation();
+    const router = useRouter();
+    const { sendOTP } = useAuth();
 
     // Validate Indian phone number (10 digits)
-    const isValidPhoneNumber = (number) => {
+    const isValidPhoneNumber = (number: string) => {
         const phoneRegex = /^[6-9]\d{9}$/;
         return phoneRegex.test(number);
     };
 
-    const handlePhoneNumberChange = (text) => {
+    const handlePhoneNumberChange = (text: string) => {
         // Remove any non-numeric characters
         const numericText = text.replace(/[^0-9]/g, '');
 
@@ -29,36 +36,51 @@ const Login = () => {
         }
     };
 
-    const handleSendOTP = () => {
+    const handleSendOTP = async () => {
         if (isValidPhoneNumber(phoneNumber)) {
-            Alert.alert('Success', `OTP sent to +91 ${phoneNumber}`);
-            navigation.navigate('otp');
-            // Add your OTP sending logic here
+            setLoading(true);
+            try {
+                const result = await sendOTP(phoneNumber);
+                if (result.success) {
+                    Alert.alert('Success', `OTP sent to +91 ${phoneNumber}`, [
+                        { text: 'OK', onPress: () => router.push({ pathname: '/(auth)/otp', params: { phone: phoneNumber } }) }
+                    ]);
+                } else {
+                    Alert.alert('Error', result.error || 'Failed to send OTP');
+                }
+            } catch (error) {
+                Alert.alert('Error', 'Something went wrong. Please try again.');
+            } finally {
+                setLoading(false);
+            }
         }
     };
-
-    const handleSignUp = () => {
-        // Add navigation to sign up screen
-        // Alert.alert('Sign Up', 'Navigate to Sign Up screen');
-        navigation.navigate('otp');
-    };
-
-
-    const navigation = useNavigation();
 
     useLayoutEffect(() => {
         navigation.setOptions({
             headerTitle: () => (
-
                 <Text className="text-2xl font-grotesk-bold text-[#121516]">AQUA HOME</Text>
-
             ),
             headerTitleAlign: 'center',
             headerShadowVisible: false,
         });
     }, [navigation]);
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.loadingContainer}>
+                    <LoadingSkeleton width="60%" height={32} style={styles.loadingTitle} />
+                    <LoadingSkeleton width="40%" height={20} style={styles.loadingLabel} />
+                    <LoadingSkeleton width="100%" height={56} style={styles.loadingInput} />
+                    <LoadingSkeleton width="100%" height={48} borderRadius={24} style={styles.loadingButton} />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <Text style={styles.welcomeText}>Welcome back</Text>
 
             <View style={styles.inputContainer}>
@@ -83,21 +105,46 @@ const Login = () => {
                     isValidPhoneNumber(phoneNumber) ? styles.activeButton : styles.inactiveButton
                 ]}
                 onPress={handleSendOTP}
-                disabled={!isValidPhoneNumber(phoneNumber)}
+                disabled={!isValidPhoneNumber(phoneNumber) || loading}
             >
-                <Text style={styles.buttonText}>Send OTP</Text>
+                {loading ? (
+                    <ActivityIndicator color="#111618" size="small" />
+                ) : (
+                    <Text style={styles.buttonText}>Send OTP</Text>
+                )}
             </TouchableOpacity>
 
-
-        </View>
-
+            <View style={styles.helpContainer}>
+                <Text style={styles.helpText}>
+                    By continuing, you agree to our Terms of Service and Privacy Policy
+                </Text>
+            </View>
+        </SafeAreaView>
     )
 }
+
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: 'white',
         paddingHorizontal: 16,
+    },
+    loadingContainer: {
+        flex: 1,
+        paddingTop: 20,
+    },
+    loadingTitle: {
+        marginBottom: 32,
+    },
+    loadingLabel: {
+        marginBottom: 8,
+    },
+    loadingInput: {
+        marginBottom: 24,
+    },
+    loadingButton: {
+        marginTop: 'auto',
+        marginBottom: 20,
     },
     welcomeText: {
         color: '#111618',
@@ -155,15 +202,17 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontFamily: 'SpaceGrotesk_700Bold',
     },
-    signUpContainer: {
+    helpContainer: {
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 24,
+        marginTop: 'auto',
     },
-    signUpText: {
-        color: '#111618',
+    helpText: {
+        color: '#607e8a',
         fontSize: 14,
-        textDecorationLine: 'underline',
-        fontFamily: 'SpaceGrotesk_500Medium',
+        textAlign: 'center',
+        fontFamily: 'SpaceGrotesk_400Regular',
+        lineHeight: 20,
     },
 });
 

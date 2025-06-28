@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,39 +9,73 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Search } from 'lucide-react-native';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
+import { mockApiService } from '@/services/mockApi';
+import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
+import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
 
 const AquaHomeApp = () => {
-
   const navigation = useNavigation();
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-
         <Text className="text-2xl font-grotesk-bold text-[#121516]">AQUA HOME</Text>
-
       ),
       headerTitleAlign: 'center',
     });
   }, [navigation]);
+
+  useEffect(() => {
+    loadHomeData();
+  }, []);
+
+  const loadHomeData = async () => {
+    try {
+      setLoading(true);
+      const [productsResponse, ordersResponse] = await Promise.all([
+        mockApiService.getProducts(),
+        mockApiService.getOrders('1'),
+      ]);
+
+      if (productsResponse.success) {
+        setProducts(productsResponse.data.slice(0, 3)); // Show only first 3 products
+      }
+
+      if (ordersResponse.success) {
+        setOrders(ordersResponse.data.slice(0, 2)); // Show only recent orders
+      }
+    } catch (error) {
+      console.error('Error loading home data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <HomeSkeleton />;
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-
-
         {/* Search Bar */}
-        <View className="px-4 py-3 hidden">
-          <View className="flex-row h-14 bg-[#f1f3f4] rounded-xl items-center">
+        <View className="px-4 py-3">
+          <TouchableOpacity 
+            onPress={() => router.push('/(tabs)/products')}
+            className="flex-row h-14 bg-[#f1f3f4] rounded-xl items-center"
+          >
             <View className="pl-4 pr-2">
               <Search size={24} color="#607e8a" />
             </View>
-            <TextInput
-              placeholder="Search products"
-              placeholderTextColor="#607e8a"
-              className="flex-1 text-[#111618] text-base px-2 font-grotesk-medium"
-            />
-          </View>
+            <Text className="flex-1 text-[#607e8a] text-base px-2 font-grotesk-medium">
+              Search products
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Popular Products */}
@@ -54,56 +88,30 @@ const AquaHomeApp = () => {
           className="pl-4"
           contentContainerStyle={{ paddingRight: 16 }}
         >
-          <View className="w-60 mr-3">
-            <Image
-              source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCn8Xq0NZjLTnruHqThxvgDdGZ72-pTxzgjv101iAqgcS8nLTbdx-6cEVHNnJe-z1_WJ3aPsphBitkQWb25laSSnAhhnfgJ-n3ORNQ8pCFJju8wIHyROOcuIcLvQxHJMg6ijpvWsdeiNKxBVRH_AF1u2ivHOLqrOA23P56PWbbJOirVyHNtO73WdPcdjHsquiPXD9VTYbze4lmBLhOL47CP5k3FKN1h89pl4s_H-ST4SxJJbU3AW7oP-V7Br-IP51QFY3egpE7ntA'
-              }}
-              className="w-full aspect-square rounded-xl mb-4"
-            />
-            <View className="gap-1">
-              <Text className="text-xl font-grotesk-bold text-[#121516]">
-                AquaPure 3000
-              </Text>
-              <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
-                Advanced filtration for ultimate purity
-              </Text>
-            </View>
-          </View>
-
-          <View className="w-60 mr-3">
-            <Image
-              source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCeNZNfVjMgkhHSKOvQyN9T11WD62lrh8xB80nx6nuazPZWxpyNjk7KADSIPd1UX7-M3A95YfjOHAv7-eVRsOkh-9DTlZYJFsGacmDMnaEk6w681sL1hJOJUtA-mPOCpJzwQVxBrwrDgbP2aUHfcNpu3duxe-YQnBdBXLVGM_xKSn7eeK6c0FU2EuNpIkL_WcxEqP3PfruOWQTY3zWBi8AErDDaOJ_gTWIHatWLb5NIkJfnUdWQZvglZBFSpI1F-uoZzdRn3BMr5A'
-              }}
-              className="w-full aspect-square rounded-xl mb-4"
-            />
-            <View className="gap-1">
-              <Text className="text-xl font-grotesk-bold text-[#121516]">
-                AquaStream 2000
-              </Text>
-              <Text className="text-sm text-[#6a7a81] font-grotesk-medium ">
-                Sleek design with efficient filtration
-              </Text>
-            </View>
-          </View>
-
-          <View className="w-60 mr-3">
-            <Image
-              source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBNBVkUGo-P1Cn49C0apFDRFhH3FEfhPj9lIaTh4XbaXXH4eYrVP6_9e7X_LGqHv3ASpOHM9GT6_pMJRupSxbIu516Vuq2K6KqQQr9fju1EOogJ0YVMgInZQJcaugXC5M4lskeOalEKDEyeJLhHDbkyxfxaWw-dRPR0OMobgn6qkTQPz8OM09nbDjitcdYlEzSamox0r8fUcfG9JseVJ0-L-X5OLyJ0QZ2ttaUQcCoudZIUCD6YUXUEWxagjPbhChZAW7Nq-DrCcQ'
-              }}
-              className="w-full aspect-square rounded-xl mb-4"
-            />
-            <View className="gap-1">
-              <Text className="text-xl font-grotesk-bold text-[#121516]">
-                AquaClear 1500
-              </Text>
-              <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
-                Compact and reliable water purification
-              </Text>
-            </View>
-          </View>
+          {products.map((product) => (
+            <TouchableOpacity
+              key={product.id}
+              onPress={() => router.push(`/products/${product.id}`)}
+              className="w-60 mr-3"
+            >
+              <Image
+                source={{ uri: product.image }}
+                className="w-full aspect-square rounded-xl mb-4"
+                resizeMode="cover"
+              />
+              <View className="gap-1">
+                <Text className="text-xl font-grotesk-bold text-[#121516]">
+                  {product.name}
+                </Text>
+                <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
+                  {product.description}
+                </Text>
+                <Text className="text-lg font-grotesk-bold text-[#4fa3c4] mt-2">
+                  ₹{product.price.toLocaleString()}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </ScrollView>
 
         {/* Coupons & Promotions */}
@@ -111,10 +119,10 @@ const AquaHomeApp = () => {
           Coupons & Promotions
         </Text>
         <View className="p-4">
-          <View className="flex-row items-stretch justify-between gap-4 rounded-xl">
+          <View className="flex-row items-stretch justify-between gap-4 rounded-xl bg-[#e8f4f8] p-4">
             <View className="flex-[2] gap-4">
               <View className="gap-1">
-                <Text className="text-sm text-[#6a7a81] font-grotesk">
+                <Text className="text-sm text-[#4fa3c4] font-grotesk-medium">
                   Limited Time Offer
                 </Text>
                 <Text className="text-lg font-grotesk-bold text-[#121516]">
@@ -124,75 +132,90 @@ const AquaHomeApp = () => {
                   Use code: FRESH20 at checkout
                 </Text>
               </View>
-              <TouchableOpacity className="bg-[#f1f3f4] px-4 py-2 rounded-full self-start">
-                <Text className="text-base font-grotesk-medium text-[#121516]">
+              <TouchableOpacity className="bg-[#4fa3c4] px-4 py-2 rounded-full self-start">
+                <Text className="text-base font-grotesk-medium text-white">
                   Shop Now
                 </Text>
               </TouchableOpacity>
             </View>
             <Image
               source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
+                uri: 'https://images.pexels.com/photos/1001897/pexels-photo-1001897.jpeg?auto=compress&cs=tinysrgb&w=400'
               }}
-              className="flex-1 h-full rounded-xl"
+              className="flex-1 h-full rounded-xl min-h-[100px]"
+              resizeMode="cover"
             />
           </View>
         </View>
+
         <View className="p-4">
-          <View className="flex-row items-stretch justify-between gap-4 rounded-xl">
+          <View className="flex-row items-stretch justify-between gap-4 rounded-xl bg-[#f8f4e8] p-4">
             <View className="flex-[2] gap-4">
               <View className="gap-1">
-                <Text className="text-sm text-[#6a7a81] font-grotesk">
-                  Limited Time Offer
+                <Text className="text-sm text-[#d4a574] font-grotesk-medium">
+                  New Customer Special
                 </Text>
                 <Text className="text-lg font-grotesk-bold text-[#121516]">
-                  Save 20% on Your Next Filter
+                  Free Installation & Setup
                 </Text>
                 <Text className="text-sm text-[#6a7a81]">
-                  Use code: FRESH20 at checkout
+                  For all new AquaHome purchases
                 </Text>
               </View>
-              <TouchableOpacity className="bg-[#f1f3f4] px-4 py-2 rounded-full self-start">
-                <Text className="text-base font-grotesk-medium text-[#121516]">
-                  Shop Now
+              <TouchableOpacity className="bg-[#d4a574] px-4 py-2 rounded-full self-start">
+                <Text className="text-base font-grotesk-medium text-white">
+                  Learn More
                 </Text>
               </TouchableOpacity>
             </View>
             <Image
               source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
+                uri: 'https://images.pexels.com/photos/3964736/pexels-photo-3964736.jpeg?auto=compress&cs=tinysrgb&w=400'
               }}
-              className="flex-1 h-full rounded-xl"
+              className="flex-1 h-full rounded-xl min-h-[100px]"
+              resizeMode="cover"
             />
           </View>
         </View>
 
         {/* Recent Orders */}
-        <Text className="text-3xl font-grotesk-bold text-[#121516] px-4 pb-3 pt-12">
-          Recent Orders
-        </Text>
-        <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2 justify-between">
-          <View className="flex-row items-center gap-4 flex-1">
-            <Image
-              source={{
-                uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDBZ61x4RuWJ41wAa5YQoyYlOG8jcKA9npD3Tq4venBfH-bDikXOv36g7xsQ2Qruc3Yv4oVUNRTNvGlIWeQmcSp2lHTRdyGaJoReaCr7Ff180ot9YdbgZ1dJhSBSWxcL5FNzGvIYTShwaE5am8rgMb5TWM3_40sRTuCfrGE7G0L5z1EsLXCCs6-IdL5YheU85zQR9RFiVHtiLY0KAjsjh_BMCDkkPsbIlHhxVUS1rZrWFjB5BqQO5FhfMjppiS66zr84_w_dil_sQ'
-              }}
-              className="w-14 h-14 rounded-lg"
-            />
-            <View className="flex-1 justify-center gap-0.5">
-              <Text className="text-xl font-grotesk-bold text-[#121516] leading-normal">
-                AquaPure 3000
-              </Text>
-              <Text className="text-base text-[#6a7a81] font-grotesk-medium leading-normal">
-                Order #123456
-              </Text>
-            </View>
-          </View>
-          <Text className="text-xl font-grotesk-bold text-[#121516]">$199</Text>
-        </View>
+        {orders.length > 0 && (
+          <>
+            <Text className="text-3xl font-grotesk-bold text-[#121516] px-4 pb-3 pt-12">
+              Recent Orders
+            </Text>
+            {orders.map((order) => (
+              <TouchableOpacity
+                key={order.id}
+                onPress={() => router.push(`/orders/${order.id}`)}
+                className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2 justify-between"
+              >
+                <View className="flex-row items-center gap-4 flex-1">
+                  <Image
+                    source={{ uri: order.items[0]?.image }}
+                    className="w-14 h-14 rounded-lg"
+                    resizeMode="cover"
+                  />
+                  <View className="flex-1 justify-center gap-0.5">
+                    <Text className="text-xl font-grotesk-bold text-[#121516] leading-normal">
+                      {order.items[0]?.name}
+                    </Text>
+                    <Text className="text-base text-[#6a7a81] font-grotesk-medium leading-normal">
+                      Order #{order.id} • {order.status}
+                    </Text>
+                  </View>
+                </View>
+                <Text className="text-xl font-grotesk-bold text-[#121516]">
+                  ₹{order.total.toLocaleString()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </>
+        )}
+
+        {/* Bottom spacing */}
+        <View className="h-8" />
       </ScrollView>
-
-
     </SafeAreaView>
   );
 };
