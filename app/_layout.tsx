@@ -15,6 +15,45 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import { SheetProvider } from 'react-native-actions-sheet';
+import { TouchableOpacity, Text, View } from 'react-native';
+import { ShoppingCart } from 'lucide-react-native';
+import { useCart } from '@/contexts/CartContext';
+import { useRouter } from 'expo-router';
+
+function CartHeaderButton() {
+  const { state } = useCart();
+  const router = useRouter();
+
+  return (
+    <TouchableOpacity
+      onPress={() => router.push('/cart')}
+      style={{ marginRight: 16, position: 'relative' }}
+    >
+      <ShoppingCart size={24} color="#121516" />
+      {state.itemCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          backgroundColor: '#ff4444',
+          borderRadius: 10,
+          minWidth: 20,
+          height: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <Text style={{
+            color: 'white',
+            fontSize: 12,
+            fontWeight: 'bold',
+          }}>
+            {state.itemCount > 99 ? '99+' : state.itemCount}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -48,7 +87,8 @@ export default function RootLayout() {
                 headerStyle: {
                   backgroundColor: '#fff'
                 },
-                headerShown: true
+                headerShown: true,
+                headerRight: () => <CartHeaderButton />
               }}
             />
             <Stack.Screen
@@ -124,3 +164,4 @@ export default function RootLayout() {
     </CartProvider>
   );
 }
+</Stack.Screen>

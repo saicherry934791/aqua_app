@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Text, View, TouchableOpacity } from 'react-native';
 import {
   Grid3X3,
   Grid3X3Icon,
@@ -21,9 +21,41 @@ import ProfileIcon from '@/components/icons/ProfileIcon';
 import OrdersIcon from '@/components/icons/OrdersIcon';
 import OrdersActiveIcon from '@/components/icons/OrdersActiveIcon';
 import { useCart } from '@/contexts/CartContext';
+import { useRouter } from 'expo-router';
 
 export default function TabLayout() {
   const { state } = useCart();
+  const router = useRouter();
+
+  const CartHeaderButton = () => (
+    <TouchableOpacity
+      onPress={() => router.push('/cart')}
+      style={{ marginRight: 16, position: 'relative' }}
+    >
+      <ShoppingCart size={24} color="#121516" />
+      {state.itemCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: -8,
+          right: -8,
+          backgroundColor: '#ff4444',
+          borderRadius: 10,
+          minWidth: 20,
+          height: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <Text style={{
+            color: 'white',
+            fontSize: 12,
+            fontWeight: 'bold',
+          }}>
+            {state.itemCount > 99 ? '99+' : state.itemCount}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
   return (
     <Tabs
@@ -62,6 +94,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           headerShown: true,
+          headerRight: () => <CartHeaderButton />,
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
               <HomeActiveIcon />
@@ -74,47 +107,13 @@ export default function TabLayout() {
         name="products"
         options={{
           title: 'Products',
+          headerRight: () => <CartHeaderButton />,
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
               <ProductsActiveIcon />
             ) : (
               <ProductsIcon />
             ),
-        }}
-      />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          title: 'Cart',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={{ position: 'relative' }}>
-              <ShoppingCart 
-                size={24} 
-                color={focused ? '#121516' : '#607e8a'} 
-              />
-              {state.itemCount > 0 && (
-                <View style={{
-                  position: 'absolute',
-                  top: -8,
-                  right: -8,
-                  backgroundColor: '#ff4444',
-                  borderRadius: 10,
-                  minWidth: 20,
-                  height: 20,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                  <Text style={{
-                    color: 'white',
-                    fontSize: 12,
-                    fontWeight: 'bold',
-                  }}>
-                    {state.itemCount > 99 ? '99+' : state.itemCount}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ),
         }}
       />
       <Tabs.Screen
