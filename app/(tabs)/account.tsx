@@ -8,7 +8,6 @@ import {
     Image,
     Switch,
     SafeAreaView,
-    Pressable,
     TextInput,
     ActivityIndicator,
     Alert,
@@ -25,20 +24,18 @@ export default function ProfileScreen() {
         name: 'Sophia Carter',
         email: 'sophia.carter@email.com',
         phone: '+1 (555) 123-4567',
+        alternatePhone: '+1 (555) 987-6543',
         address: '123 Main St, Anytown, USA',
     });
 
     // Edit form states
-    const [editData, setEditData] = useState({});
+    const [editData, setEditData] = useState('');
     const [currentEditField, setCurrentEditField] = useState('');
+    const [fieldLabel, setFieldLabel] = useState('');
+    const [keyboardType, setKeyboardType] = useState('default');
 
     const navigation = useNavigation();
-    
-    // Action sheet refs
-    const nameActionSheetRef = useRef(null);
-    const emailActionSheetRef = useRef(null);
-    const phoneActionSheetRef = useRef(null);
-    const addressActionSheetRef = useRef(null);
+    const editActionSheetRef = useRef<ActionSheetRef>(null);
 
     useLayoutEffect(() => {
         navigation.setOptions({
@@ -49,27 +46,37 @@ export default function ProfileScreen() {
         });
     }, [navigation]);
 
-    const openEditSheet = (field) => {
+    const openEditSheet = (field: string, label: string, keyboard: string = 'default') => {
         setCurrentEditField(field);
-        setEditData({ [field]: profileData[field] });
-        
-        switch (field) {
-            case 'name':
-                nameActionSheetRef.current?.show();
-                break;
-            case 'email':
-                emailActionSheetRef.current?.show();
-                break;
-            case 'phone':
-                phoneActionSheetRef.current?.show();
-                break;
-            case 'address':
-                addressActionSheetRef.current?.show();
-                break;
-        }
+        setFieldLabel(label);
+        setKeyboardType(keyboard);
+        setEditData(profileData[field as keyof typeof profileData] || '');
+        editActionSheetRef.current?.show();
     };
 
     const handleSave = async () => {
+        if (!editData.trim()) {
+            Alert.alert('Error', `Please enter ${fieldLabel.toLowerCase()}`);
+            return;
+        }
+
+        // Validation based on field type
+        if (currentEditField === 'email') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(editData)) {
+                Alert.alert('Error', 'Please enter a valid email address');
+                return;
+            }
+        }
+
+        if (currentEditField === 'phone' || currentEditField === 'alternatePhone') {
+            const phoneRegex = /^[+]?[\d\s\-\(\)]+$/;
+            if (!phoneRegex.test(editData)) {
+                Alert.alert('Error', 'Please enter a valid phone number');
+                return;
+            }
+        }
+
         setIsLoading(true);
         
         try {
@@ -79,26 +86,13 @@ export default function ProfileScreen() {
             // Update profile data
             setProfileData(prev => ({
                 ...prev,
-                [currentEditField]: editData[currentEditField]
+                [currentEditField]: editData
             }));
             
             // Close action sheet
-            switch (currentEditField) {
-                case 'name':
-                    nameActionSheetRef.current?.hide();
-                    break;
-                case 'email':
-                    emailActionSheetRef.current?.hide();
-                    break;
-                case 'phone':
-                    phoneActionSheetRef.current?.hide();
-                    break;
-                case 'address':
-                    addressActionSheetRef.current?.hide();
-                    break;
-            }
+            editActionSheetRef.current?.hide();
             
-            Alert.alert('Success', `${currentEditField.charAt(0).toUpperCase() + currentEditField.slice(1)} updated successfully!`);
+            Alert.alert('Success', `${fieldLabel} updated successfully!`);
         } catch (error) {
             Alert.alert('Error', 'Failed to update. Please try again.');
         } finally {
@@ -112,81 +106,6 @@ export default function ProfileScreen() {
         </Svg>
     );
 
-    const renderActionSheet = (field: string, placeholder: string, keyboardType = 'default') => {
-        const actionSheetRef = field === 'name' ? nameActionSheetRef :
-                             field === 'email' ? emailActionSheetRef :
-                             field === 'phone' ? phoneActionSheetRef :
-                             addressActionSheetRef;
-
-        return (
-            <ActionSheet
-                ref={actionSheetRef}
-                containerStyle={{
-                    backgroundColor: 'white',
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20,
-                }}
-                gestureEnabled
-                closeOnTouchBackdrop
-            >
-                <View className="p-6">
-                    <View className="flex-row justify-between items-center mb-6">
-                        <Text className="text-xl font-grotesk-bold text-[#121517]">
-                            Edit {field.charAt(0).toUpperCase() + field.slice(1)}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => actionSheetRef.current?.hide()}
-                            className="w-8 h-8 items-center justify-center"
-                        >
-                            <Svg width={20} height={20} viewBox="0 0 256 256" fill="#687b82">
-                                <Path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
-                            </Svg>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View className="mb-6">
-                        <Text className="text-base font-grotesk-medium text-[#121517] mb-2">
-                            {placeholder}
-                        </Text>
-                        <TextInput
-                            value={editData[field] || ''}
-                            onChangeText={(text) => setEditData(prev => ({ ...prev, [field]: text }))}
-                            placeholder={placeholder}
-                            keyboardType={keyboardType}
-                            className="border border-[#e1e5e7] rounded-lg px-4 py-3 text-base font-grotesk text-[#121517]"
-                            autoFocus
-                        />
-                    </View>
-
-                    <View className="flex-row gap-3">
-                        <TouchableOpacity
-                            onPress={() => actionSheetRef.current?.hide()}
-                            className="flex-1 py-3 px-4 rounded-lg border border-[#e1e5e7] items-center justify-center"
-                        >
-                            <Text className="text-base font-grotesk-medium text-[#687b82]">Cancel</Text>
-                        </TouchableOpacity>
-                        
-                        <TouchableOpacity
-                            onPress={handleSave}
-                            disabled={isLoading || !editData[field]?.trim()}
-                            className={`flex-1 py-3 px-4 rounded-lg items-center justify-center ${
-                                isLoading || !editData[field]?.trim() 
-                                    ? 'bg-[#e1e5e7]' 
-                                    : 'bg-[#3a9dc4]'
-                            }`}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color="white" size="small" />
-                            ) : (
-                                <Text className="text-base font-grotesk-medium text-white">Save</Text>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </ActionSheet>
-        );
-    };
-
     return (
         <SafeAreaView className="flex-1 bg-white">
             <ScrollView className="flex-1">
@@ -196,7 +115,7 @@ export default function ProfileScreen() {
                         <View className="gap-4 flex-col items-center">
                             <Image
                                 source={{
-                                    uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAkScOdeu2JDWF-QEj7Xdqp4L7lfTX_4PpNs58DNmuq6ZS3Z6KV7n_jgpCzQ-QgB5emQP3JbX8aBDG4imeweeVd5ch-4mgk69Inu9lDHk8JdWOVx2kQIiXdbq6Ks3JFAnchqmg3pxVTB7oWmGVg5l8T0uvzBHdwHffkO0wkWijFh77u1804S-6fHdxQFq5unVzRDyh7awb84uaA8yvMgwCizMi8rec2AKQ4DXhHG17-jI_rnk47q3bIXlQiKi4Wa2yyQ_xDmc-9pQ',
+                                    uri: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400',
                                 }}
                                 className="w-32 h-32 rounded-full"
                                 resizeMode="cover"
@@ -207,7 +126,7 @@ export default function ProfileScreen() {
                                         {profileData.name}
                                     </Text>
                                     <TouchableOpacity
-                                        onPress={() => openEditSheet('name')}
+                                        onPress={() => openEditSheet('name', 'Full Name')}
                                         className="p-1"
                                     >
                                         <EditIcon />
@@ -240,7 +159,7 @@ export default function ProfileScreen() {
                         </Text>
                     </View>
                     <TouchableOpacity
-                        onPress={() => openEditSheet('email')}
+                        onPress={() => openEditSheet('email', 'Email Address', 'email-address')}
                         className="p-2"
                     >
                         <EditIcon />
@@ -259,7 +178,28 @@ export default function ProfileScreen() {
                         <Text className="text-[#687b82] text-sm">{profileData.phone}</Text>
                     </View>
                     <TouchableOpacity
-                        onPress={() => openEditSheet('phone')}
+                        onPress={() => openEditSheet('phone', 'Phone Number', 'phone-pad')}
+                        className="p-2"
+                    >
+                        <EditIcon />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Alternate Phone */}
+                <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2">
+                    <View className="w-12 h-12 items-center justify-center rounded-lg bg-[#f1f3f4]">
+                        <Svg width={24} height={24} viewBox="0 0 256 256" fill="#121517">
+                            <Path d="M222.37,158.46l-47.11-21.11-.13-.06a16,16,0,0,0-15.17,1.4,8.12,8.12,0,0,0-.75.56L134.87,160c-15.42-7.49-31.34-23.29-38.83-38.51l20.78-24.71c.2-.25.39-.5.57-.77a16,16,0,0,0,1.32-15.06l0-.12L97.54,33.64a16,16,0,0,0-16.62-9.52A56.26,56.26,0,0,0,32,80c0,79.4,64.6,144,144,144a56.26,56.26,0,0,0,55.88-48.92A16,16,0,0,0,222.37,158.46ZM176,208A128.14,128.14,0,0,1,48,80,40.2,40.2,0,0,1,82.87,40a.61.61,0,0,0,0,.12l21,47L83.2,111.86a6.13,6.13,0,0,0-.57.77,16,16,0,0,0-1,15.7c9.06,18.53,27.73,37.06,46.46,46.11a16,16,0,0,0,15.75-1.14,8.44,8.44,0,0,0,.74-.56L168.89,152l47,21.05h0s.08,0,.11,0A40.21,40.21,0,0,1,176,208Z" />
+                        </Svg>
+                    </View>
+                    <View className="flex-col justify-center flex-1">
+                        <Text className="text-[#121517] text-xl font-grotesk-medium">Alternate Phone</Text>
+                        <Text className="text-[#687b82] text-sm">
+                            {profileData.alternatePhone}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={() => openEditSheet('alternatePhone', 'Alternate Phone Number', 'phone-pad')}
                         className="p-2"
                     >
                         <EditIcon />
@@ -280,26 +220,11 @@ export default function ProfileScreen() {
                         </Text>
                     </View>
                     <TouchableOpacity
-                        onPress={() => openEditSheet('address')}
+                        onPress={() => openEditSheet('address', 'Address')}
                         className="p-2"
                     >
                         <EditIcon />
                     </TouchableOpacity>
-                </View>
-
-                {/* Payment Method */}
-                <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2">
-                    <View className="w-12 h-12 items-center justify-center rounded-lg bg-[#f1f3f4]">
-                        <Svg width={24} height={24} viewBox="0 0 256 256" fill="#121517">
-                            <Path d="M224,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48Zm0,16V88H32V64Zm0,128H32V104H224v88Zm-16-24a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h32A8,8,0,0,1,208,168Zm-64,0a8,8,0,0,1-8,8H120a8,8,0,0,1,0-16h16A8,8,0,0,1,144,168Z" />
-                        </Svg>
-                    </View>
-                    <View className="flex-col justify-center flex-1">
-                        <Text className="text-[#121517] text-xl font-grotesk-medium">
-                            Payment Method
-                        </Text>
-                        <Text className="text-[#687b82] text-sm">Visa **** 1234</Text>
-                    </View>
                 </View>
 
                 {/* Settings Section */}
@@ -355,11 +280,75 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* Action Sheets */}
-            {renderActionSheet('name', 'Enter your full name')}
-            {renderActionSheet('email', 'Enter your email address', 'email-address')}
-            {renderActionSheet('phone', 'Enter your phone number', 'phone-pad')}
-            {renderActionSheet('address', 'Enter your address')}
+            {/* Single Edit Action Sheet */}
+            <ActionSheet
+                ref={editActionSheetRef}
+                containerStyle={{
+                    backgroundColor: 'white',
+                    borderTopLeftRadius: 20,
+                    borderTopRightRadius: 20,
+                }}
+                gestureEnabled
+                closeOnTouchBackdrop
+            >
+                <View className="p-6">
+                    <View className="flex-row justify-between items-center mb-6">
+                        <Text className="text-xl font-grotesk-bold text-[#121517]">
+                            Edit {fieldLabel}
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() => editActionSheetRef.current?.hide()}
+                            className="w-8 h-8 items-center justify-center"
+                        >
+                            <Svg width={20} height={20} viewBox="0 0 256 256" fill="#687b82">
+                                <Path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+                            </Svg>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View className="mb-6">
+                        <Text className="text-base font-grotesk-medium text-[#121517] mb-2">
+                            {fieldLabel}
+                        </Text>
+                        <TextInput
+                            value={editData}
+                            onChangeText={setEditData}
+                            placeholder={`Enter your ${fieldLabel.toLowerCase()}`}
+                            keyboardType={keyboardType as any}
+                            className="border border-[#e1e5e7] rounded-lg px-4 py-3 text-base font-grotesk text-[#121517]"
+                            autoFocus
+                            multiline={currentEditField === 'address'}
+                            numberOfLines={currentEditField === 'address' ? 3 : 1}
+                            textAlignVertical={currentEditField === 'address' ? 'top' : 'center'}
+                        />
+                    </View>
+
+                    <View className="flex-row gap-3">
+                        <TouchableOpacity
+                            onPress={() => editActionSheetRef.current?.hide()}
+                            className="flex-1 py-3 px-4 rounded-lg border border-[#e1e5e7] items-center justify-center"
+                        >
+                            <Text className="text-base font-grotesk-medium text-[#687b82]">Cancel</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                            onPress={handleSave}
+                            disabled={isLoading || !editData?.trim()}
+                            className={`flex-1 py-3 px-4 rounded-lg items-center justify-center ${
+                                isLoading || !editData?.trim() 
+                                    ? 'bg-[#e1e5e7]' 
+                                    : 'bg-[#3a9dc4]'
+                            }`}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="white" size="small" />
+                            ) : (
+                                <Text className="text-base font-grotesk-medium text-white">Save</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </ActionSheet>
 
             {/* Bottom spacing */}
             <View className="h-5 bg-white" />
