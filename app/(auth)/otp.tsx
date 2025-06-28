@@ -102,8 +102,9 @@ const OTPScreen = () => {
             try {
                 const result = await loginWithOTP(phone as string, otpString);
                 if (result.success) {
-                    // Don't navigate here - let the index screen handle navigation
-                    // The auth context will update and index screen will redirect appropriately
+                    // Success! The auth context will handle navigation
+                    // Don't navigate manually - let the index screen handle it
+                    console.log('OTP verification successful');
                 } else {
                     Alert.alert('Error', result.error || 'Invalid OTP. Please try again.');
                     // Clear OTP on error
@@ -112,6 +113,9 @@ const OTPScreen = () => {
                 }
             } catch (error) {
                 Alert.alert('Error', 'Something went wrong. Please try again.');
+                // Clear OTP on error
+                setOtp(['', '', '', '', '', '']);
+                inputRefs.current[0]?.focus();
             } finally {
                 setLoading(false);
             }
@@ -174,7 +178,7 @@ const OTPScreen = () => {
             <TouchableOpacity
                 style={[
                     styles.verifyButton,
-                    isComplete ? styles.activeButton : styles.inactiveButton
+                    isComplete && !loading ? styles.activeButton : styles.inactiveButton
                 ]}
                 onPress={handleVerifyOTP}
                 disabled={!isComplete || loading}
@@ -191,7 +195,7 @@ const OTPScreen = () => {
             <TouchableOpacity 
                 onPress={handleResendOTP} 
                 style={styles.resendContainer}
-                disabled={resendLoading}
+                disabled={resendLoading || loading}
             >
                 {resendLoading ? (
                     <ActivityIndicator color="#607e8a" size="small" />

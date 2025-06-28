@@ -9,17 +9,35 @@ export default function IndexScreen() {
 
   useEffect(() => {
     if (!state.isLoading) {
+      console.log('Navigation check:', {
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+        isAuthenticated: state.isAuthenticated,
+        hasCompletedDetails: state.hasCompletedDetails,
+        userIsFirstTime: state.user?.isFirstTime,
+      });
+
       if (!state.hasCompletedOnboarding) {
+        console.log('Navigating to Onboarding');
         router.replace('/Onboarding');
       } else if (!state.isAuthenticated) {
+        console.log('Navigating to Auth');
         router.replace('/(auth)');
       } else if (state.user?.isFirstTime || !state.hasCompletedDetails) {
+        console.log('Navigating to OnboardDetails');
         router.replace('/OnboardDetails');
       } else {
+        console.log('Navigating to Tabs');
         router.replace('/(tabs)');
       }
     }
-  }, [state.isLoading, state.hasCompletedOnboarding, state.isAuthenticated, state.hasCompletedDetails, state.user]);
+  }, [
+    state.isLoading, 
+    state.hasCompletedOnboarding, 
+    state.isAuthenticated, 
+    state.hasCompletedDetails, 
+    state.user?.isFirstTime,
+    router
+  ]);
 
   return (
     <View style={styles.container}>

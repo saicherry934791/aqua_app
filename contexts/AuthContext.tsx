@@ -135,11 +135,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         dispatch({ type: 'SET_USER', payload: user });
         dispatch({ type: 'SET_DETAILS_COMPLETED', payload: !user.isFirstTime });
         
+        console.log('Login successful, user:', user);
         return { success: true };
       }
       
       return { success: false, error: response.error };
     } catch (error) {
+      console.error('Login error:', error);
       return { success: false, error: 'Login failed' };
     }
   };
@@ -177,6 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await AsyncStorage.setItem('onboardingCompleted', 'true');
       dispatch({ type: 'SET_ONBOARDING_COMPLETED', payload: true });
+      console.log('Onboarding completed');
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
@@ -191,11 +194,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await AsyncStorage.setItem('userProfile', JSON.stringify(updatedUser));
         dispatch({ type: 'SET_USER', payload: updatedUser });
         dispatch({ type: 'SET_DETAILS_COMPLETED', payload: true });
+        console.log('User details completed:', updatedUser);
         return { success: true };
       }
       
       return { success: false, error: response.error };
     } catch (error) {
+      console.error('Error completing user details:', error);
       return { success: false, error: 'Failed to update profile' };
     }
   };
