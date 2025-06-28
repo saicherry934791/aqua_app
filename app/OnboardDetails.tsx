@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRouter } from 'expo-router';
-import { MapPin, User, Phone, Mail, Navigation, Check } from 'lucide-react-native';
+import { MapPin, User, Phone, Mail, Navigation, Check, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as Location from 'expo-location';
 import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 interface UserDetails {
   name: string;
@@ -27,7 +28,7 @@ interface UserDetails {
   longitude?: number;
 }
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function OnboardDetailsScreen() {
   const navigation = useNavigation();
@@ -39,6 +40,16 @@ export default function OnboardDetailsScreen() {
   const [pageLoading, setPageLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
   const [locationSelected, setLocationSelected] = useState(false);
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 12.9716, // Default to Bangalore
+    longitude: 77.5946,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+  const [selectedLocation, setSelectedLocation] = useState({
+    latitude: 12.9716,
+    longitude: 77.5946,
+  });
   const [userDetails, setUserDetails] = useState<UserDetails>({
     name: '',
     email: '',
@@ -102,32 +113,56 @@ export default function OnboardDetailsScreen() {
       setLocationLoading(true);
       
       if (Platform.OS === 'web') {
-        // For web, simulate location selection
-        setTimeout(() => {
-          const mockAddresses = [
-            '123 Tech Park, Bangalore, Karnataka 560001',
-            '456 Business District, Mumbai, Maharashtra 400001',
-            '789 IT Hub, Hyderabad, Telangana 500001',
-            '321 Software City, Chennai, Tamil Nadu 600001',
-          ];
-          
-          const randomAddress = mockAddresses[Math.floor(Math.random() * mockAddresses.length)];
-          
-          setUserDetails(prev => ({
-            ...prev,
-            address: randomAddress,
-            latitude: 12.9716 + (Math.random() - 0.5) * 0.1,
-            longitude: 77.5946 + (Math.random() - 0.5) * 0.1,
-          }));
-          
-          setLocationSelected(true);
+        // For web, use browser geolocation API
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              
+              // Mock reverse geocoding for web
+              const mockAddresses = [
+                `${Math.floor(Math.random() * 999) + 1} Tech Park, Bangalore, Karnataka 560001`,
+                `${Math.floor(Math.random() * 999) + 1} Business District, Mumbai, Maharashtra 400001`,
+                `${Math.floor(Math.random() * 999) + 1} IT Hub, Hyderabad, Telangana 500001`,
+                `${Math.floor(Math.random() * 999) + 1} Software City, Chennai, Tamil Nadu 600001`,
+              ];
+              
+              const randomAddress = mockAddresses[Math.floor(Math.random() * mockAddresses.length)];
+              
+              setUserDetails(prev => ({
+                ...prev,
+                address: randomAddress,
+                latitude,
+                longitude,
+              }));
+              
+              setMapRegion({
+                latitude,
+                longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              });
+              
+              setSelectedLocation({ latitude, longitude });
+              setLocationSelected(true);
+              setLocationLoading(false);
+              Alert.alert('Success', 'Location detected successfully!');
+            },
+            (error) => {
+              console.error('Geolocation error:', error);
+              setLocationLoading(false);
+              Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+          );
+        } else {
           setLocationLoading(false);
-          Alert.alert('Success', 'Location detected successfully!');
-        }, 2000);
+          Alert.alert('Error', 'Geolocation is not supported by this browser.');
+        }
         return;
       }
       
-      // Request permission
+      // Request permission for mobile
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Location permission is required to get your current address');
@@ -136,7 +171,9 @@ export default function OnboardDetailsScreen() {
       }
 
       // Get current position
-      const location = await Location.getCurrentPositionAsync({});
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
       const { latitude, longitude } = location.coords;
 
       // Reverse geocode to get address
@@ -163,6 +200,14 @@ export default function OnboardDetailsScreen() {
           longitude,
         }));
         
+        setMapRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+        
+        setSelectedLocation({ latitude, longitude });
         setLocationSelected(true);
         Alert.alert('Success', 'Location detected successfully!');
       }
@@ -176,39 +221,63 @@ export default function OnboardDetailsScreen() {
 
   const openMapPicker = () => {
     setShowMap(true);
-    // Simulate map interaction
-    setTimeout(() => {
-      const mockLocations = [
-        {
-          address: '123 Green Valley Apartments, Koramangala, Bangalore 560034',
-          latitude: 12.9352,
-          longitude: 77.6245,
-        },
-        {
-          address: '456 Sunrise Residency, Bandra West, Mumbai 400050',
-          latitude: 19.0596,
-          longitude: 72.8295,
-        },
-        {
-          address: '789 Tech Tower, HITEC City, Hyderabad 500081',
-          latitude: 17.4485,
-          longitude: 78.3908,
-        },
-      ];
-      
-      const selectedLocation = mockLocations[Math.floor(Math.random() * mockLocations.length)];
-      
+  };
+
+  const handleMapPress = async (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    setSelectedLocation({ latitude, longitude });
+    
+    try {
+      if (Platform.OS === 'web') {
+        // Mock address for web
+        const mockAddress = `${Math.floor(Math.random() * 999) + 1} Selected Location, City, State 560001`;
+        setUserDetails(prev => ({
+          ...prev,
+          address: mockAddress,
+          latitude,
+          longitude,
+        }));
+      } else {
+        // Reverse geocode for mobile
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude,
+          longitude,
+        });
+
+        if (reverseGeocode.length > 0) {
+          const addressComponents = reverseGeocode[0];
+          const fullAddress = [
+            addressComponents.name,
+            addressComponents.street,
+            addressComponents.city,
+            addressComponents.region,
+            addressComponents.postalCode,
+            addressComponents.country,
+          ].filter(Boolean).join(', ');
+
+          setUserDetails(prev => ({
+            ...prev,
+            address: fullAddress,
+            latitude,
+            longitude,
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      // Still update with coordinates even if reverse geocoding fails
       setUserDetails(prev => ({
         ...prev,
-        address: selectedLocation.address,
-        latitude: selectedLocation.latitude,
-        longitude: selectedLocation.longitude,
+        latitude,
+        longitude,
       }));
-      
-      setLocationSelected(true);
-      setShowMap(false);
-      Alert.alert('Location Selected', 'Address has been updated from map selection');
-    }, 3000);
+    }
+  };
+
+  const confirmMapSelection = () => {
+    setLocationSelected(true);
+    setShowMap(false);
+    Alert.alert('Location Selected', 'Address has been updated from map selection');
   };
 
   const handleSubmit = async () => {
@@ -261,23 +330,68 @@ export default function OnboardDetailsScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.mapContainer}>
           <View style={styles.mapHeader}>
-            <Text style={styles.mapTitle}>Select Your Location</Text>
-            <Text style={styles.mapSubtitle}>Tap on the map to select your exact location</Text>
+            <View style={styles.mapHeaderContent}>
+              <TouchableOpacity
+                style={styles.mapCloseButton}
+                onPress={() => setShowMap(false)}
+              >
+                <X size={24} color="#687b82" />
+              </TouchableOpacity>
+              <View style={styles.mapTitleContainer}>
+                <Text style={styles.mapTitle}>Select Your Location</Text>
+                <Text style={styles.mapSubtitle}>Tap on the map to select your exact location</Text>
+              </View>
+            </View>
           </View>
           
-          {/* Mock Map Interface */}
-          <View style={styles.mockMap}>
-            <View style={styles.mapPin}>
-              <MapPin size={32} color="#4fa3c4" />
+          {Platform.OS === 'web' ? (
+            // Mock map for web
+            <View style={styles.mockMap}>
+              <TouchableOpacity 
+                style={styles.mockMapTouchable}
+                onPress={() => {
+                  const mockCoords = {
+                    nativeEvent: {
+                      coordinate: {
+                        latitude: 12.9716 + (Math.random() - 0.5) * 0.1,
+                        longitude: 77.5946 + (Math.random() - 0.5) * 0.1,
+                      }
+                    }
+                  };
+                  handleMapPress(mockCoords);
+                }}
+              >
+                <View style={styles.mapPin}>
+                  <MapPin size={32} color="#4fa3c4" />
+                </View>
+                <Text style={styles.mapInstruction}>Tap anywhere to select location</Text>
+                
+                {selectedLocation && (
+                  <View style={styles.selectedLocationInfo}>
+                    <Text style={styles.selectedLocationText}>
+                      Location Selected: {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
-            <Text style={styles.mapInstruction}>Tap anywhere to select location</Text>
-            
-            {/* Loading overlay */}
-            <View style={styles.mapLoading}>
-              <ActivityIndicator size="large" color="#4fa3c4" />
-              <Text style={styles.mapLoadingText}>Selecting location...</Text>
-            </View>
-          </View>
+          ) : (
+            // Real map for mobile
+            <MapView
+              style={styles.map}
+              region={mapRegion}
+              onPress={handleMapPress}
+              provider={PROVIDER_GOOGLE}
+              showsUserLocation={true}
+              showsMyLocationButton={true}
+            >
+              <Marker
+                coordinate={selectedLocation}
+                title="Selected Location"
+                description="Your delivery address"
+              />
+            </MapView>
+          )}
           
           <View style={styles.mapActions}>
             <TouchableOpacity
@@ -285,6 +399,14 @@ export default function OnboardDetailsScreen() {
               onPress={() => setShowMap(false)}
             >
               <Text style={styles.mapCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.mapConfirmButton, !selectedLocation && styles.mapConfirmButtonDisabled]}
+              onPress={confirmMapSelection}
+              disabled={!selectedLocation}
+            >
+              <Text style={styles.mapConfirmText}>Confirm Location</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -634,30 +756,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mapHeader: {
-    padding: 20,
     backgroundColor: 'white',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f3f4',
+    paddingTop: 10,
+  },
+  mapHeaderContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  mapCloseButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  mapTitleContainer: {
+    flex: 1,
   },
   mapTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontFamily: 'SpaceGrotesk_700Bold',
     color: '#121516',
-    textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   mapSubtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: 'SpaceGrotesk_400Regular',
     color: '#687b82',
-    textAlign: 'center',
+  },
+  map: {
+    flex: 1,
   },
   mockMap: {
     flex: 1,
     backgroundColor: '#e8f4f8',
+  },
+  mockMapTouchable: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
   mapPin: {
     backgroundColor: 'white',
@@ -668,36 +806,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    marginBottom: 16,
   },
   mapInstruction: {
     fontSize: 16,
     fontFamily: 'SpaceGrotesk_500Medium',
     color: '#4fa3c4',
+    textAlign: 'center',
+  },
+  selectedLocationInfo: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
     marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  mapLoading: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-  },
-  mapLoadingText: {
-    fontSize: 16,
+  selectedLocationText: {
+    fontSize: 14,
     fontFamily: 'SpaceGrotesk_500Medium',
-    color: '#4fa3c4',
+    color: '#121516',
+    textAlign: 'center',
   },
   mapActions: {
-    padding: 20,
+    flexDirection: 'row',
+    padding: 16,
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#f1f3f4',
+    gap: 12,
   },
   mapCancelButton: {
+    flex: 1,
     backgroundColor: '#f1f3f4',
     borderRadius: 24,
     paddingVertical: 16,
@@ -707,5 +850,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SpaceGrotesk_600SemiBold',
     color: '#687b82',
+  },
+  mapConfirmButton: {
+    flex: 1,
+    backgroundColor: '#4fa3c4',
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  mapConfirmButtonDisabled: {
+    backgroundColor: '#e1e5e7',
+  },
+  mapConfirmText: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: 'white',
   },
 });
