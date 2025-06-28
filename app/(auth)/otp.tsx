@@ -10,7 +10,6 @@ import {
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const OTPScreen = () => {
@@ -103,8 +102,8 @@ const OTPScreen = () => {
             try {
                 const result = await loginWithOTP(phone as string, otpString);
                 if (result.success) {
-                    // Navigation will be handled by the auth context and index screen
-                    router.replace('/');
+                    // Don't navigate here - let the index screen handle navigation
+                    // The auth context will update and index screen will redirect appropriately
                 } else {
                     Alert.alert('Error', result.error || 'Invalid OTP. Please try again.');
                     // Clear OTP on error
@@ -159,23 +158,6 @@ const OTPScreen = () => {
             editable={!loading}
         />
     );
-
-    if (loading) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.loadingContainer}>
-                    <LoadingSkeleton width="60%" height={32} style={styles.loadingTitle} />
-                    <LoadingSkeleton width="80%" height={20} style={styles.loadingDescription} />
-                    <View style={styles.otpContainer}>
-                        {Array(6).fill(0).map((_, index) => (
-                            <LoadingSkeleton key={index} width={48} height={56} borderRadius={12} />
-                        ))}
-                    </View>
-                    <LoadingSkeleton width="100%" height={48} borderRadius={24} style={styles.loadingButton} />
-                </View>
-            </SafeAreaView>
-        );
-    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -232,19 +214,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: 'white',
         paddingHorizontal: 16,
-    },
-    loadingContainer: {
-        flex: 1,
-        paddingTop: 20,
-    },
-    loadingTitle: {
-        marginBottom: 16,
-    },
-    loadingDescription: {
-        marginBottom: 32,
-    },
-    loadingButton: {
-        marginTop: 32,
     },
     title: {
         color: '#111618',

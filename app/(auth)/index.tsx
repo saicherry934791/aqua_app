@@ -11,7 +11,6 @@ import React, { useLayoutEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
 
 const Login = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -66,19 +65,6 @@ const Login = () => {
         });
     }, [navigation]);
 
-    if (loading) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.loadingContainer}>
-                    <LoadingSkeleton width="60%" height={32} style={styles.loadingTitle} />
-                    <LoadingSkeleton width="40%" height={20} style={styles.loadingLabel} />
-                    <LoadingSkeleton width="100%" height={56} style={styles.loadingInput} />
-                    <LoadingSkeleton width="100%" height={48} borderRadius={24} style={styles.loadingButton} />
-                </View>
-            </SafeAreaView>
-        );
-    }
-
     return (
         <SafeAreaView style={styles.container}>
             <Text style={styles.welcomeText}>Welcome back</Text>
@@ -128,23 +114,6 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: 'white',
         paddingHorizontal: 16,
-    },
-    loadingContainer: {
-        flex: 1,
-        paddingTop: 20,
-    },
-    loadingTitle: {
-        marginBottom: 32,
-    },
-    loadingLabel: {
-        marginBottom: 8,
-    },
-    loadingInput: {
-        marginBottom: 24,
-    },
-    loadingButton: {
-        marginTop: 'auto',
-        marginBottom: 20,
     },
     welcomeText: {
         color: '#111618',
