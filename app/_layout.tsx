@@ -166,4 +166,3 @@ export default function RootLayout() {
     </CartProvider>
   );
 }
-</Stack.Screen>
