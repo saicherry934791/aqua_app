@@ -51,9 +51,6 @@ const ProductsScreen = () => {
   return (
     <SafeAreaProvider>
       <SafeAreaView className="flex-1 bg-white px-4">
-
-
-        {/* Products */}
         <SkeletonWrapper
           loading={loading}
           refreshing={refreshing}
@@ -61,8 +58,6 @@ const ProductsScreen = () => {
           skeleton={<ProductSkeleton />}
           stickyHeaderIndices={[0]}
         >
-
-
           {/* Search Bar (Sticky) */}
           <View className="py-3 bg-white z-[999]">
             <View className="flex-row h-14 bg-[#f1f3f4] rounded-xl items-center px-4">
@@ -103,7 +98,6 @@ const ProductsScreen = () => {
               </Pressable>
             ))}
           </View>
-
         </SkeletonWrapper>
       </SafeAreaView>
     </SafeAreaProvider>
@@ -171,6 +165,5 @@ const MOCK_PRODUCTS = [
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAMJmZqe1R89JWS6csjEv0NRq2cNgDA0D4GDMhx9eI7mJTvxiHk7UAgOe8MyvmyqknzZ4x_5Koyk7aLuV5ak0wlmNWtvAmKC3byjtZHBCeAmF6Mvc0REDApNl-cbtrhThBhIaOXp8v8-vM1npCVLhg87EVVKr7OYJvHoxWwqNB2YY21Z8_hq4uHjV0con7pYoVIJ8iiXVekCk3wAjBuzmjkRCpoSO71-HPTZpqUZjUeccggH5hRMJRIuSBNk2SukSqXhRHdDlAQKA'
   },
 ];
-
 
 export default ProductsScreen;
