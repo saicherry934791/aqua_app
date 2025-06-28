@@ -18,7 +18,8 @@ import { SheetProvider } from 'react-native-actions-sheet';
 import { TouchableOpacity, Text, View } from 'react-native';
 import { ShoppingCart } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
-import { useRouter } from 'expo-router';
+import { useRouter } from 'expo-router'
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 function CartHeaderButton() {
   const { state } = useCart();
@@ -56,6 +57,7 @@ function CartHeaderButton() {
 }
 
 export default function RootLayout() {
+  useFrameworkReady();
   const colorScheme = useColorScheme();
 
   // 2. Load the Space Grotesk fonts

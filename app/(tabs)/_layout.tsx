@@ -1,15 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, Text, View, TouchableOpacity } from 'react-native';
-import {
-  Grid3X3,
-  Grid3X3Icon,
-  Home,
-  ShoppingCart,
-  ShoppingCartIcon,
-  User,
-  UserIcon,
-} from 'lucide-react-native';
+import { Grid3x2 as Grid3X3, Grid3x2 as Grid3X3Icon, Chrome as Home, ShoppingCart, ShoppingCart as ShoppingCartIcon, User, User as UserIcon } from 'lucide-react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import HomeIcon from '@/components/icons/HomeIcon';
