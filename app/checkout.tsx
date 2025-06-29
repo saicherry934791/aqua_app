@@ -36,7 +36,7 @@ interface CheckoutItem {
 export default function CheckoutScreen() {
   const navigation = useNavigation();
   const router = useRouter();
-  const { directCheckout, checkoutData } = useLocalSearchParams();
+  const { directCheckout, checkoutData, locationData } = useLocalSearchParams();
   
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -65,25 +65,23 @@ export default function CheckoutScreen() {
     }
   }, [directCheckout, checkoutData]);
 
-  // Listen for location updates from map picker
+  // Handle location data from map picker
   React.useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      // Check if we have location data from map picker
-      const locationData = router.params?.locationData;
-      if (locationData) {
-        const { address, latitude, longitude } = JSON.parse(locationData as string);
+    if (locationData) {
+      try {
+        const data = JSON.parse(locationData as string);
         setShippingInfo(prev => ({
           ...prev,
-          address,
-          latitude,
-          longitude,
+          address: data.address,
+          latitude: data.latitude,
+          longitude: data.longitude,
         }));
         setLocationSelected(true);
+      } catch (error) {
+        console.error('Error parsing location data:', error);
       }
-    });
-
-    return unsubscribe;
-  }, [navigation, router.params]);
+    }
+  }, [locationData]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -113,7 +111,7 @@ export default function CheckoutScreen() {
       return false;
     }
 
-    if (!shippingInfo.address.trim()) {
+    if (!shippingInfo.address.trim() || !locationSelected) {
       Alert.alert('Error', 'Please select your delivery address from the map');
       return false;
     }
@@ -398,7 +396,7 @@ export default function CheckoutScreen() {
             </Text>
 
             {/* Full Name - Reduced Height */}
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 14 }}>
               <Text style={{
                 fontSize: 14,
                 fontFamily: 'SpaceGrotesk_600SemiBold',
@@ -413,12 +411,11 @@ export default function CheckoutScreen() {
                 backgroundColor: '#f8f9fa',
                 borderRadius: 8,
                 paddingHorizontal: 12,
-                paddingVertical: 12,
                 borderWidth: 1,
                 borderColor: '#e1e5e7',
-                height: 44,
+                height: 40,
               }}>
-                <User size={18} color="#687b82" />
+                <User size={16} color="#687b82" />
                 <TextInput
                   value={shippingInfo.fullName}
                   onChangeText={(text) => setShippingInfo(prev => ({ ...prev, fullName: text }))}
@@ -426,8 +423,8 @@ export default function CheckoutScreen() {
                   placeholderTextColor="#687b82"
                   style={{
                     flex: 1,
-                    marginLeft: 10,
-                    fontSize: 15,
+                    marginLeft: 8,
+                    fontSize: 14,
                     fontFamily: 'SpaceGrotesk_400Regular',
                     color: '#121516',
                   }}
@@ -436,7 +433,7 @@ export default function CheckoutScreen() {
             </View>
 
             {/* Phone Number - Reduced Height */}
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 14 }}>
               <Text style={{
                 fontSize: 14,
                 fontFamily: 'SpaceGrotesk_600SemiBold',
@@ -451,18 +448,17 @@ export default function CheckoutScreen() {
                 backgroundColor: '#f8f9fa',
                 borderRadius: 8,
                 paddingHorizontal: 12,
-                paddingVertical: 12,
                 borderWidth: 1,
                 borderColor: '#e1e5e7',
-                height: 44,
+                height: 40,
               }}>
-                <Phone size={18} color="#687b82" />
+                <Phone size={16} color="#687b82" />
                 <Text style={{
-                  fontSize: 15,
+                  fontSize: 14,
                   fontFamily: 'SpaceGrotesk_600SemiBold',
                   color: '#121516',
-                  marginLeft: 10,
-                  marginRight: 6,
+                  marginLeft: 8,
+                  marginRight: 4,
                 }}>
                   +91
                 </Text>
@@ -475,7 +471,7 @@ export default function CheckoutScreen() {
                   maxLength={10}
                   style={{
                     flex: 1,
-                    fontSize: 15,
+                    fontSize: 14,
                     fontFamily: 'SpaceGrotesk_400Regular',
                     color: '#121516',
                   }}
@@ -498,7 +494,7 @@ export default function CheckoutScreen() {
                 backgroundColor: '#f8f9fa',
                 borderRadius: 8,
                 borderWidth: 1,
-                borderColor: '#e1e5e7',
+                borderColor: locationSelected ? '#4fa3c4' : '#e1e5e7',
                 overflow: 'hidden',
               }}>
                 {/* Address Display */}
@@ -507,22 +503,22 @@ export default function CheckoutScreen() {
                   alignItems: 'flex-start',
                   paddingHorizontal: 12,
                   paddingVertical: 12,
-                  minHeight: 60,
+                  minHeight: 50,
                 }}>
-                  <MapPin size={18} color="#687b82" style={{ marginTop: 2 }} />
-                  <View style={{ flex: 1, marginLeft: 10 }}>
+                  <MapPin size={16} color="#687b82" style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1, marginLeft: 8 }}>
                     {shippingInfo.address ? (
                       <Text style={{
-                        fontSize: 15,
+                        fontSize: 14,
                         fontFamily: 'SpaceGrotesk_400Regular',
                         color: '#121516',
-                        lineHeight: 20,
+                        lineHeight: 18,
                       }}>
                         {shippingInfo.address}
                       </Text>
                     ) : (
                       <Text style={{
-                        fontSize: 15,
+                        fontSize: 14,
                         fontFamily: 'SpaceGrotesk_400Regular',
                         color: '#687b82',
                         fontStyle: 'italic',
@@ -534,12 +530,12 @@ export default function CheckoutScreen() {
                   {locationSelected && (
                     <View style={{
                       backgroundColor: '#e8f4f8',
-                      borderRadius: 6,
-                      padding: 3,
-                      marginLeft: 8,
-                      marginTop: 2,
+                      borderRadius: 4,
+                      padding: 2,
+                      marginLeft: 6,
+                      marginTop: 1,
                     }}>
-                      <Check size={14} color="#4fa3c4" />
+                      <Check size={12} color="#4fa3c4" />
                     </View>
                   )}
                 </View>
@@ -558,7 +554,7 @@ export default function CheckoutScreen() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      paddingVertical: 10,
+                      paddingVertical: 8,
                       backgroundColor: '#e8f4f8',
                     }}
                   >
@@ -566,12 +562,12 @@ export default function CheckoutScreen() {
                       <ActivityIndicator size="small" color="#4fa3c4" />
                     ) : (
                       <>
-                        <Navigation size={14} color="#4fa3c4" />
+                        <Navigation size={12} color="#4fa3c4" />
                         <Text style={{
-                          fontSize: 13,
+                          fontSize: 12,
                           fontFamily: 'SpaceGrotesk_600SemiBold',
                           color: '#4fa3c4',
-                          marginLeft: 4,
+                          marginLeft: 3,
                         }}>
                           Current Location
                         </Text>
@@ -586,18 +582,18 @@ export default function CheckoutScreen() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      paddingVertical: 10,
+                      paddingVertical: 8,
                       backgroundColor: '#fff3e0',
                       borderLeftWidth: 1,
                       borderLeftColor: '#e1e5e7',
                     }}
                   >
-                    <MapPin size={14} color="#ff9800" />
+                    <MapPin size={12} color="#ff9800" />
                     <Text style={{
-                      fontSize: 13,
+                      fontSize: 12,
                       fontFamily: 'SpaceGrotesk_600SemiBold',
                       color: '#ff9800',
-                      marginLeft: 4,
+                      marginLeft: 3,
                     }}>
                       Select on Map
                     </Text>
@@ -607,10 +603,10 @@ export default function CheckoutScreen() {
               
               {/* Helper Text */}
               <Text style={{
-                fontSize: 12,
+                fontSize: 11,
                 fontFamily: 'SpaceGrotesk_400Regular',
                 color: '#687b82',
-                marginTop: 6,
+                marginTop: 4,
                 textAlign: 'center',
               }}>
                 📍 Select your exact location for accurate delivery
@@ -641,8 +637,8 @@ export default function CheckoutScreen() {
             onPress={handlePayment}
             disabled={loading || !locationSelected}
             style={{
-              height: 52,
-              borderRadius: 14,
+              height: 48,
+              borderRadius: 12,
               backgroundColor: loading || !locationSelected ? '#e1e5e7' : '#4fa3c4',
               flexDirection: 'row',
               alignItems: 'center',
@@ -658,7 +654,7 @@ export default function CheckoutScreen() {
               <>
                 <ActivityIndicator color="white" size="small" />
                 <Text style={{
-                  fontSize: 17,
+                  fontSize: 16,
                   fontFamily: 'SpaceGrotesk_700Bold',
                   color: 'white',
                   marginLeft: 8,
@@ -668,9 +664,9 @@ export default function CheckoutScreen() {
               </>
             ) : (
               <>
-                <CreditCard size={22} color="white" />
+                <CreditCard size={20} color="white" />
                 <Text style={{
-                  fontSize: 17,
+                  fontSize: 16,
                   fontFamily: 'SpaceGrotesk_700Bold',
                   color: 'white',
                   marginLeft: 8,
@@ -682,11 +678,11 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
           
           <Text style={{
-            fontSize: 11,
+            fontSize: 10,
             fontFamily: 'SpaceGrotesk_400Regular',
             color: '#687b82',
             textAlign: 'center',
-            marginTop: 6,
+            marginTop: 4,
           }}>
             🔒 Secure payment powered by Razorpay
           </Text>

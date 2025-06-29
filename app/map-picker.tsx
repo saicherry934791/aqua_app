@@ -12,7 +12,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { Search, X, MapPin } from 'lucide-react-native';
+import { Search, X, MapPin, Check } from 'lucide-react-native';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
 
 interface SearchResult {
@@ -27,13 +27,17 @@ interface SearchResult {
 export default function MapPickerScreen() {
   const navigation = useNavigation();
   const router = useRouter();
-  const { onLocationSelect } = useLocalSearchParams();
+  const { returnTo } = useLocalSearchParams();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    latitude: number; 
+    longitude: number;
+    address: string;
+  } | null>(null);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -105,16 +109,23 @@ export default function MapPickerScreen() {
           address: data.result.formatted_address || result.description,
         };
         
-        setSelectedLocation({ latitude: lat, longitude: lng });
-        
-        // Return to checkout with selected location
-        router.back();
-        // Note: In a real implementation, you'd pass this data back to the checkout screen
-        Alert.alert('Location Selected', `Selected: ${location.address}`);
+        setSelectedLocation(location);
       }
     } catch (error) {
       console.error('Error selecting search result:', error);
       Alert.alert('Error', 'Failed to select location. Please try again.');
+    }
+  };
+
+  const confirmLocation = () => {
+    if (selectedLocation) {
+      // Navigate back to checkout with location data
+      router.push({
+        pathname: returnTo as string || '/checkout',
+        params: {
+          locationData: JSON.stringify(selectedLocation),
+        },
+      });
     }
   };
 
@@ -134,6 +145,13 @@ export default function MapPickerScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* Instructions */}
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsText}>
+            🔍 Search for your address below to select your exact delivery location
+          </Text>
+        </View>
+
         {/* Search Bar */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
@@ -144,6 +162,7 @@ export default function MapPickerScreen() {
               placeholderTextColor="#687b82"
               value={searchQuery}
               onChangeText={handleSearchQueryChange}
+              autoFocus
             />
             {isSearching && (
               <ActivityIndicator size="small" color="#4fa3c4" />
@@ -178,13 +197,18 @@ export default function MapPickerScreen() {
           </View>
         </View>
 
+        {/* Selected Location Info */}
         {selectedLocation && (
-          <View style={styles.selectedLocationInfo}>
-            <Text style={styles.selectedLocationText}>
-              📍 Location Selected
+          <View style={styles.selectedLocationContainer}>
+            <View style={styles.selectedLocationHeader}>
+              <Check size={20} color="#4fa3c4" />
+              <Text style={styles.selectedLocationTitle}>Location Selected</Text>
+            </View>
+            <Text style={styles.selectedLocationAddress}>
+              {selectedLocation.address}
             </Text>
             <Text style={styles.coordinatesText}>
-              {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
+              📍 {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
             </Text>
           </View>
         )}
@@ -196,19 +220,16 @@ export default function MapPickerScreen() {
           style={styles.cancelButton}
           onPress={() => router.back()}
         >
+          <X size={18} color="#687b82" />
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
           style={[styles.confirmButton, !selectedLocation && styles.confirmButtonDisabled]}
-          onPress={() => {
-            if (selectedLocation) {
-              router.back();
-              Alert.alert('Success', 'Location selected successfully!');
-            }
-          }}
+          onPress={confirmLocation}
           disabled={!selectedLocation}
         >
+          <Check size={18} color="white" />
           <Text style={styles.confirmButtonText}>Confirm Location</Text>
         </TouchableOpacity>
       </View>
@@ -229,6 +250,18 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  instructionsContainer: {
+    backgroundColor: '#e8f4f8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  instructionsText: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_500Medium',
+    color: '#4fa3c4',
+    textAlign: 'center',
   },
   searchContainer: {
     marginBottom: 16,
@@ -331,29 +364,36 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
   },
-  selectedLocationInfo: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  selectedLocationContainer: {
+    backgroundColor: '#e8f4f8',
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#4fa3c4',
   },
-  selectedLocationText: {
+  selectedLocationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  selectedLocationTitle: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#4fa3c4',
+    marginLeft: 8,
+  },
+  selectedLocationAddress: {
+    fontSize: 15,
+    fontFamily: 'SpaceGrotesk_500Medium',
     color: '#121516',
-    textAlign: 'center',
-    marginBottom: 4,
+    lineHeight: 20,
+    marginBottom: 6,
   },
   coordinatesText: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'SpaceGrotesk_400Regular',
     color: '#687b82',
-    textAlign: 'center',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -363,21 +403,26 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     backgroundColor: '#f1f3f4',
-    borderRadius: 24,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   cancelButtonText: {
     fontSize: 16,
     fontFamily: 'SpaceGrotesk_600SemiBold',
     color: '#687b82',
+    marginLeft: 6,
   },
   confirmButton: {
     flex: 1,
     backgroundColor: '#4fa3c4',
-    borderRadius: 24,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   confirmButtonDisabled: {
     backgroundColor: '#e1e5e7',
@@ -386,5 +431,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SpaceGrotesk_600SemiBold',
     color: 'white',
+    marginLeft: 6,
   },
 });

@@ -16,7 +16,7 @@ import {
   SpaceGrotesk_700Bold,
 } from '@expo-google-fonts/space-grotesk';
 import { SheetProvider } from 'react-native-actions-sheet';
-import { TouchableOpacity, Text, View } from 'react-native';
+import { TouchableOpacity, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
 import { ShoppingCart } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
 import { useRouter } from 'expo-router'
@@ -78,91 +78,109 @@ export default function RootLayout() {
       <CartProvider>
         <SheetProvider>
           <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-            <Stack>
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false, headerShadowVisible: false }} />
-              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
-              <Stack.Screen name="OnboardDetails" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" />
-              <Stack.Screen
-                name="products/[id]"
-                options={{
-                  title: "Product Details",
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true,
-                  headerRight: () => <CartHeaderButton />
-                }}
-              />
-              <Stack.Screen
-                name="cart"
-                options={{
-                  title: "Shopping Cart",
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true,
-                  headerShadowVisible: false
-                }}
-              />
-              <Stack.Screen
-                name="checkout"
-                options={{
-                  title: "Checkout",
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true,
-                  headerShadowVisible: false
-                }}
-              />
-              <Stack.Screen
-                name="order-confirmation"
-                options={{
-                  title: "Order Confirmation",
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true,
-                  headerShadowVisible: false
-                }}
-              />
-              <Stack.Screen
-                name="orders/[id]"
-                options={{
-                  title: "Order Details",
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true,
-                  headerShadowVisible: false
-                }}
-              />
-              <Stack.Screen
-                name="services/[id]"
-                options={{
-                  title: "Service Details",
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true,
-                  headerShadowVisible: false
-                }}
-              />
-              <Stack.Screen
-                name="subscriptions/[id]"
-                options={{
-                  title: "Subscription Details",
-                  headerShadowVisible: false,
-                  headerStyle: {
-                    backgroundColor: '#fff'
-                  },
-                  headerShown: true
-                }}
-              />
-            </Stack>
+            <KeyboardAvoidingView 
+              style={{ flex: 1 }} 
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              enabled={false} // We'll handle this per screen
+            >
+              <Stack>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false, headerShadowVisible: false }} />
+                <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                <Stack.Screen name="Onboarding" options={{ headerShown: false }} />
+                <Stack.Screen name="OnboardDetails" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" />
+                <Stack.Screen
+                  name="products/[id]"
+                  options={{
+                    title: "Product Details",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerRight: () => <CartHeaderButton />
+                  }}
+                />
+                <Stack.Screen
+                  name="cart"
+                  options={{
+                    title: "Shopping Cart",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerShadowVisible: false
+                  }}
+                />
+                <Stack.Screen
+                  name="checkout"
+                  options={{
+                    title: "Checkout",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerShadowVisible: false
+                  }}
+                />
+                <Stack.Screen
+                  name="map-picker"
+                  options={{
+                    title: "Select Location",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerShadowVisible: false,
+                    presentation: 'modal'
+                  }}
+                />
+                <Stack.Screen
+                  name="order-confirmation"
+                  options={{
+                    title: "Order Confirmation",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerShadowVisible: false
+                  }}
+                />
+                <Stack.Screen
+                  name="orders/[id]"
+                  options={{
+                    title: "Order Details",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerShadowVisible: false
+                  }}
+                />
+                <Stack.Screen
+                  name="services/[id]"
+                  options={{
+                    title: "Service Details",
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true,
+                    headerShadowVisible: false
+                  }}
+                />
+                <Stack.Screen
+                  name="subscriptions/[id]"
+                  options={{
+                    title: "Subscription Details",
+                    headerShadowVisible: false,
+                    headerStyle: {
+                      backgroundColor: '#fff'
+                    },
+                    headerShown: true
+                  }}
+                />
+              </Stack>
+            </KeyboardAvoidingView>
             <StatusBar style="auto" />
           </ThemeProvider>
         </SheetProvider>
