@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
 import { CreditCard, MapPin, User, Phone, Navigation, Check } from 'lucide-react-native';
@@ -64,6 +65,26 @@ export default function CheckoutScreen() {
     }
   }, [directCheckout, checkoutData]);
 
+  // Listen for location updates from map picker
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Check if we have location data from map picker
+      const locationData = router.params?.locationData;
+      if (locationData) {
+        const { address, latitude, longitude } = JSON.parse(locationData as string);
+        setShippingInfo(prev => ({
+          ...prev,
+          address,
+          latitude,
+          longitude,
+        }));
+        setLocationSelected(true);
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, router.params]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
@@ -93,7 +114,7 @@ export default function CheckoutScreen() {
     }
 
     if (!shippingInfo.address.trim()) {
-      Alert.alert('Error', 'Please select your delivery address');
+      Alert.alert('Error', 'Please select your delivery address from the map');
       return false;
     }
 
@@ -116,7 +137,7 @@ export default function CheckoutScreen() {
             (error) => {
               console.error('Geolocation error:', error);
               setLocationLoading(false);
-              Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
+              Alert.alert('Error', 'Failed to get current location. Please use map picker.');
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
           );
@@ -127,7 +148,7 @@ export default function CheckoutScreen() {
       }
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
+      Alert.alert('Error', 'Failed to get current location. Please use map picker.');
     } finally {
       setLocationLoading(false);
     }
@@ -156,7 +177,6 @@ export default function CheckoutScreen() {
   };
 
   const openMapPicker = () => {
-    // Navigate to a simple map picker screen
     router.push({
       pathname: '/map-picker',
       params: {
@@ -233,410 +253,445 @@ export default function CheckoutScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-        {/* Order Summary Card */}
-        <View style={{
-          margin: 16,
-          backgroundColor: '#f8f9fa',
-          borderRadius: 16,
-          padding: 20,
-        }}>
-          <Text style={{
-            fontSize: 20,
-            fontFamily: 'SpaceGrotesk_700Bold',
-            color: '#121516',
-            marginBottom: 16,
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView 
+          style={{ flex: 1 }} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 120 }}
+        >
+          {/* Order Summary Card */}
+          <View style={{
+            margin: 16,
+            backgroundColor: '#f8f9fa',
+            borderRadius: 16,
+            padding: 20,
           }}>
-            Order Summary
-          </Text>
-
-          {items.map((item) => (
-            <View key={item.id} style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingVertical: 8,
+            <Text style={{
+              fontSize: 20,
+              fontFamily: 'SpaceGrotesk_700Bold',
+              color: '#121516',
+              marginBottom: 16,
             }}>
-              <View style={{ flex: 1 }}>
+              Order Summary
+            </Text>
+
+            {items.map((item) => (
+              <View key={item.id} style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                paddingVertical: 8,
+              }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    fontFamily: 'SpaceGrotesk_600SemiBold',
+                    color: '#121516',
+                  }}>
+                    {item.name}
+                  </Text>
+                  <Text style={{
+                    fontSize: 14,
+                    fontFamily: 'SpaceGrotesk_400Regular',
+                    color: '#687b82',
+                    marginTop: 2,
+                  }}>
+                    {item.type === 'subscription' ? 'Monthly Rental' : 'One-time Purchase'} • Qty: {item.quantity}
+                  </Text>
+                </View>
+                <Text style={{
+                  fontSize: 18,
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  color: '#121516',
+                }}>
+                  ₹{(item.price * item.quantity).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+
+            <View style={{
+              borderTopWidth: 1,
+              borderTopColor: '#e1e5e7',
+              marginTop: 16,
+              paddingTop: 16,
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: 8,
+              }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontFamily: 'SpaceGrotesk_400Regular',
+                  color: '#687b82',
+                }}>
+                  Subtotal
+                </Text>
                 <Text style={{
                   fontSize: 16,
                   fontFamily: 'SpaceGrotesk_600SemiBold',
                   color: '#121516',
                 }}>
-                  {item.name}
+                  ₹{total.toLocaleString()}
                 </Text>
-                <Text style={{
-                  fontSize: 14,
-                  fontFamily: 'SpaceGrotesk_400Regular',
-                  color: '#687b82',
-                  marginTop: 2,
-                }}>
-                  {item.type === 'subscription' ? 'Monthly Rental' : 'One-time Purchase'} • Qty: {item.quantity}
-                </Text>
-              </View>
-              <Text style={{
-                fontSize: 18,
-                fontFamily: 'SpaceGrotesk_700Bold',
-                color: '#121516',
-              }}>
-                ₹{(item.price * item.quantity).toLocaleString()}
-              </Text>
-            </View>
-          ))}
-
-          <View style={{
-            borderTopWidth: 1,
-            borderTopColor: '#e1e5e7',
-            marginTop: 16,
-            paddingTop: 16,
-          }}>
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginBottom: 8,
-            }}>
-              <Text style={{
-                fontSize: 16,
-                fontFamily: 'SpaceGrotesk_400Regular',
-                color: '#687b82',
-              }}>
-                Subtotal
-              </Text>
-              <Text style={{
-                fontSize: 16,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                color: '#121516',
-              }}>
-                ₹{total.toLocaleString()}
-              </Text>
-            </View>
-            
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginBottom: 12,
-            }}>
-              <Text style={{
-                fontSize: 16,
-                fontFamily: 'SpaceGrotesk_400Regular',
-                color: '#687b82',
-              }}>
-                Delivery Fee {total > 500 && '(Free above ₹500)'}
-              </Text>
-              <Text style={{
-                fontSize: 16,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                color: deliveryFee === 0 ? '#4fa3c4' : '#121516',
-              }}>
-                {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
-              </Text>
-            </View>
-
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              paddingTop: 12,
-              borderTopWidth: 1,
-              borderTopColor: '#e1e5e7',
-            }}>
-              <Text style={{
-                fontSize: 20,
-                fontFamily: 'SpaceGrotesk_700Bold',
-                color: '#121516',
-              }}>
-                Total
-              </Text>
-              <Text style={{
-                fontSize: 20,
-                fontFamily: 'SpaceGrotesk_700Bold',
-                color: '#4fa3c4',
-              }}>
-                ₹{finalTotal.toLocaleString()}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Delivery Information */}
-        <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
-          <Text style={{
-            fontSize: 20,
-            fontFamily: 'SpaceGrotesk_700Bold',
-            color: '#121516',
-            marginBottom: 20,
-          }}>
-            Delivery Information
-          </Text>
-
-          {/* Full Name */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{
-              fontSize: 16,
-              fontFamily: 'SpaceGrotesk_600SemiBold',
-              color: '#121516',
-              marginBottom: 8,
-            }}>
-              Full Name
-            </Text>
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#f8f9fa',
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#e1e5e7',
-            }}>
-              <User size={20} color="#687b82" />
-              <TextInput
-                value={shippingInfo.fullName}
-                onChangeText={(text) => setShippingInfo(prev => ({ ...prev, fullName: text }))}
-                placeholder="Enter your full name"
-                placeholderTextColor="#687b82"
-                style={{
-                  flex: 1,
-                  marginLeft: 12,
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_400Regular',
-                  color: '#121516',
-                }}
-              />
-            </View>
-          </View>
-
-          {/* Phone Number */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{
-              fontSize: 16,
-              fontFamily: 'SpaceGrotesk_600SemiBold',
-              color: '#121516',
-              marginBottom: 8,
-            }}>
-              Phone Number
-            </Text>
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#f8f9fa',
-              borderRadius: 12,
-              paddingHorizontal: 16,
-              paddingVertical: 16,
-              borderWidth: 1,
-              borderColor: '#e1e5e7',
-            }}>
-              <Phone size={20} color="#687b82" />
-              <Text style={{
-                fontSize: 16,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                color: '#121516',
-                marginLeft: 12,
-                marginRight: 8,
-              }}>
-                +91
-              </Text>
-              <TextInput
-                value={shippingInfo.phone}
-                onChangeText={(text) => setShippingInfo(prev => ({ ...prev, phone: text }))}
-                placeholder="Enter your phone number"
-                placeholderTextColor="#687b82"
-                keyboardType="numeric"
-                maxLength={10}
-                style={{
-                  flex: 1,
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_400Regular',
-                  color: '#121516',
-                }}
-              />
-            </View>
-          </View>
-
-          {/* Address */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{
-              fontSize: 16,
-              fontFamily: 'SpaceGrotesk_600SemiBold',
-              color: '#121516',
-              marginBottom: 8,
-            }}>
-              Delivery Address
-            </Text>
-            
-            <View style={{
-              backgroundColor: '#f8f9fa',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: '#e1e5e7',
-              overflow: 'hidden',
-            }}>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'flex-start',
-                paddingHorizontal: 16,
-                paddingVertical: 16,
-              }}>
-                <MapPin size={20} color="#687b82" style={{ marginTop: 2 }} />
-                <TextInput
-                  value={shippingInfo.address}
-                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, address: text }))}
-                  placeholder="Enter your delivery address"
-                  placeholderTextColor="#687b82"
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  style={{
-                    flex: 1,
-                    marginLeft: 12,
-                    fontSize: 16,
-                    fontFamily: 'SpaceGrotesk_400Regular',
-                    color: '#121516',
-                    minHeight: 60,
-                  }}
-                />
-                {locationSelected && (
-                  <View style={{
-                    backgroundColor: '#e8f4f8',
-                    borderRadius: 8,
-                    padding: 4,
-                    marginLeft: 8,
-                    marginTop: 2,
-                  }}>
-                    <Check size={16} color="#4fa3c4" />
-                  </View>
-                )}
               </View>
               
               <View style={{
                 flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: 12,
+              }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontFamily: 'SpaceGrotesk_400Regular',
+                  color: '#687b82',
+                }}>
+                  Delivery Fee {total > 500 && '(Free above ₹500)'}
+                </Text>
+                <Text style={{
+                  fontSize: 16,
+                  fontFamily: 'SpaceGrotesk_600SemiBold',
+                  color: deliveryFee === 0 ? '#4fa3c4' : '#121516',
+                }}>
+                  {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
+                </Text>
+              </View>
+
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                paddingTop: 12,
                 borderTopWidth: 1,
                 borderTopColor: '#e1e5e7',
               }}>
-                <TouchableOpacity
-                  onPress={getCurrentLocation}
-                  disabled={locationLoading}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 12,
-                    backgroundColor: '#e8f4f8',
-                  }}
-                >
-                  {locationLoading ? (
-                    <ActivityIndicator size="small" color="#4fa3c4" />
-                  ) : (
-                    <>
-                      <Navigation size={16} color="#4fa3c4" />
-                      <Text style={{
-                        fontSize: 14,
-                        fontFamily: 'SpaceGrotesk_600SemiBold',
-                        color: '#4fa3c4',
-                        marginLeft: 6,
-                      }}>
-                        Current Location
-                      </Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  onPress={openMapPicker}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    paddingVertical: 12,
-                    backgroundColor: '#fff3e0',
-                    borderLeftWidth: 1,
-                    borderLeftColor: '#e1e5e7',
-                  }}
-                >
-                  <MapPin size={16} color="#ff9800" />
-                  <Text style={{
-                    fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_600SemiBold',
-                    color: '#ff9800',
-                    marginLeft: 6,
-                  }}>
-                    Pick on Map
-                  </Text>
-                </TouchableOpacity>
+                <Text style={{
+                  fontSize: 20,
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  color: '#121516',
+                }}>
+                  Total
+                </Text>
+                <Text style={{
+                  fontSize: 20,
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  color: '#4fa3c4',
+                }}>
+                  ₹{finalTotal.toLocaleString()}
+                </Text>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
 
-      {/* Payment Button */}
-      <View style={{
-        backgroundColor: 'white',
-        borderTopWidth: 1,
-        borderTopColor: '#f1f3f4',
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
-      }}>
-        <TouchableOpacity
-          onPress={handlePayment}
-          disabled={loading}
-          style={{
-            height: 56,
-            borderRadius: 16,
-            backgroundColor: loading ? '#e1e5e7' : '#4fa3c4',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#4fa3c4',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: loading ? 0 : 0.3,
-            shadowRadius: 8,
-            elevation: loading ? 0 : 8,
-          }}
-        >
-          {loading ? (
-            <>
-              <ActivityIndicator color="white" size="small" />
+          {/* Delivery Information */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+            <Text style={{
+              fontSize: 20,
+              fontFamily: 'SpaceGrotesk_700Bold',
+              color: '#121516',
+              marginBottom: 20,
+            }}>
+              Delivery Information
+            </Text>
+
+            {/* Full Name - Reduced Height */}
+            <View style={{ marginBottom: 16 }}>
               <Text style={{
-                fontSize: 18,
-                fontFamily: 'SpaceGrotesk_700Bold',
-                color: 'white',
-                marginLeft: 8,
+                fontSize: 14,
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                color: '#121516',
+                marginBottom: 6,
               }}>
-                Processing...
+                Full Name
               </Text>
-            </>
-          ) : (
-            <>
-              <CreditCard size={24} color="white" />
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#f8f9fa',
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor: '#e1e5e7',
+                height: 44,
+              }}>
+                <User size={18} color="#687b82" />
+                <TextInput
+                  value={shippingInfo.fullName}
+                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, fullName: text }))}
+                  placeholder="Enter your full name"
+                  placeholderTextColor="#687b82"
+                  style={{
+                    flex: 1,
+                    marginLeft: 10,
+                    fontSize: 15,
+                    fontFamily: 'SpaceGrotesk_400Regular',
+                    color: '#121516',
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Phone Number - Reduced Height */}
+            <View style={{ marginBottom: 16 }}>
               <Text style={{
-                fontSize: 18,
-                fontFamily: 'SpaceGrotesk_700Bold',
-                color: 'white',
-                marginLeft: 8,
+                fontSize: 14,
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                color: '#121516',
+                marginBottom: 6,
               }}>
-                Pay ₹{finalTotal.toLocaleString()}
+                Phone Number
               </Text>
-            </>
-          )}
-        </TouchableOpacity>
-        
-        <Text style={{
-          fontSize: 12,
-          fontFamily: 'SpaceGrotesk_400Regular',
-          color: '#687b82',
-          textAlign: 'center',
-          marginTop: 8,
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#f8f9fa',
+                borderRadius: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                borderWidth: 1,
+                borderColor: '#e1e5e7',
+                height: 44,
+              }}>
+                <Phone size={18} color="#687b82" />
+                <Text style={{
+                  fontSize: 15,
+                  fontFamily: 'SpaceGrotesk_600SemiBold',
+                  color: '#121516',
+                  marginLeft: 10,
+                  marginRight: 6,
+                }}>
+                  +91
+                </Text>
+                <TextInput
+                  value={shippingInfo.phone}
+                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, phone: text }))}
+                  placeholder="Enter phone number"
+                  placeholderTextColor="#687b82"
+                  keyboardType="numeric"
+                  maxLength={10}
+                  style={{
+                    flex: 1,
+                    fontSize: 15,
+                    fontFamily: 'SpaceGrotesk_400Regular',
+                    color: '#121516',
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Address - Map Selection Required */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{
+                fontSize: 14,
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                color: '#121516',
+                marginBottom: 6,
+              }}>
+                Delivery Address
+              </Text>
+              
+              <View style={{
+                backgroundColor: '#f8f9fa',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#e1e5e7',
+                overflow: 'hidden',
+              }}>
+                {/* Address Display */}
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'flex-start',
+                  paddingHorizontal: 12,
+                  paddingVertical: 12,
+                  minHeight: 60,
+                }}>
+                  <MapPin size={18} color="#687b82" style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    {shippingInfo.address ? (
+                      <Text style={{
+                        fontSize: 15,
+                        fontFamily: 'SpaceGrotesk_400Regular',
+                        color: '#121516',
+                        lineHeight: 20,
+                      }}>
+                        {shippingInfo.address}
+                      </Text>
+                    ) : (
+                      <Text style={{
+                        fontSize: 15,
+                        fontFamily: 'SpaceGrotesk_400Regular',
+                        color: '#687b82',
+                        fontStyle: 'italic',
+                      }}>
+                        Please select your delivery address
+                      </Text>
+                    )}
+                  </View>
+                  {locationSelected && (
+                    <View style={{
+                      backgroundColor: '#e8f4f8',
+                      borderRadius: 6,
+                      padding: 3,
+                      marginLeft: 8,
+                      marginTop: 2,
+                    }}>
+                      <Check size={14} color="#4fa3c4" />
+                    </View>
+                  )}
+                </View>
+                
+                {/* Location Action Buttons */}
+                <View style={{
+                  flexDirection: 'row',
+                  borderTopWidth: 1,
+                  borderTopColor: '#e1e5e7',
+                }}>
+                  <TouchableOpacity
+                    onPress={getCurrentLocation}
+                    disabled={locationLoading}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 10,
+                      backgroundColor: '#e8f4f8',
+                    }}
+                  >
+                    {locationLoading ? (
+                      <ActivityIndicator size="small" color="#4fa3c4" />
+                    ) : (
+                      <>
+                        <Navigation size={14} color="#4fa3c4" />
+                        <Text style={{
+                          fontSize: 13,
+                          fontFamily: 'SpaceGrotesk_600SemiBold',
+                          color: '#4fa3c4',
+                          marginLeft: 4,
+                        }}>
+                          Current Location
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    onPress={openMapPicker}
+                    style={{
+                      flex: 1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      paddingVertical: 10,
+                      backgroundColor: '#fff3e0',
+                      borderLeftWidth: 1,
+                      borderLeftColor: '#e1e5e7',
+                    }}
+                  >
+                    <MapPin size={14} color="#ff9800" />
+                    <Text style={{
+                      fontSize: 13,
+                      fontFamily: 'SpaceGrotesk_600SemiBold',
+                      color: '#ff9800',
+                      marginLeft: 4,
+                    }}>
+                      Select on Map
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              {/* Helper Text */}
+              <Text style={{
+                fontSize: 12,
+                fontFamily: 'SpaceGrotesk_400Regular',
+                color: '#687b82',
+                marginTop: 6,
+                textAlign: 'center',
+              }}>
+                📍 Select your exact location for accurate delivery
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* Fixed Payment Button */}
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'white',
+          borderTopWidth: 1,
+          borderTopColor: '#f1f3f4',
+          paddingHorizontal: 16,
+          paddingVertical: 16,
+          paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 8,
         }}>
-          Secure payment powered by Razorpay
-        </Text>
-      </View>
+          <TouchableOpacity
+            onPress={handlePayment}
+            disabled={loading || !locationSelected}
+            style={{
+              height: 52,
+              borderRadius: 14,
+              backgroundColor: loading || !locationSelected ? '#e1e5e7' : '#4fa3c4',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#4fa3c4',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: loading || !locationSelected ? 0 : 0.3,
+              shadowRadius: 8,
+              elevation: loading || !locationSelected ? 0 : 8,
+            }}
+          >
+            {loading ? (
+              <>
+                <ActivityIndicator color="white" size="small" />
+                <Text style={{
+                  fontSize: 17,
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  color: 'white',
+                  marginLeft: 8,
+                }}>
+                  Processing...
+                </Text>
+              </>
+            ) : (
+              <>
+                <CreditCard size={22} color="white" />
+                <Text style={{
+                  fontSize: 17,
+                  fontFamily: 'SpaceGrotesk_700Bold',
+                  color: 'white',
+                  marginLeft: 8,
+                }}>
+                  Pay ₹{finalTotal.toLocaleString()}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+          
+          <Text style={{
+            fontSize: 11,
+            fontFamily: 'SpaceGrotesk_400Regular',
+            color: '#687b82',
+            textAlign: 'center',
+            marginTop: 6,
+          }}>
+            🔒 Secure payment powered by Razorpay
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
