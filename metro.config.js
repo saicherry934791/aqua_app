@@ -14,8 +14,6 @@ config.resolver.platforms = ['web', 'ios', 'android', 'native'];
 
 // Block native-only modules from being imported on web
 config.resolver.blockList = [
-  // Block react-native-maps native components on web
-  /node_modules\/react-native-maps\/lib\/.*\.js$/,
   // Block specific native-only modules
   /node_modules\/react-native\/Libraries\/Utilities\/codegenNativeCommands\.js$/,
   /node_modules\/react-native\/Libraries\/Components\/.*NativeComponent\.js$/,
