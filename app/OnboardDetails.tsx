@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, useCallback, useRef } from 'react';
+import React, { useState, useLayoutEffect, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -55,15 +55,17 @@ export default function OnboardDetailsScreen() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [initialLocationSet, setInitialLocationSet] = useState(false);
   
   const mapRef = useRef<MapView>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   
+  // Default to a major city (Bangalore) but will be updated with current location
   const [mapRegion, setMapRegion] = useState<Region>({
-    latitude: 12.9716, // Default to Bangalore
+    latitude: 12.9716,
     longitude: 77.5946,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
+    latitudeDelta: 0.05,
+    longitudeDelta: 0.05,
   });
   
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
@@ -82,10 +84,23 @@ export default function OnboardDetailsScreen() {
       headerTitleAlign: 'center',
       headerLeft: () => null, // Remove back button
     });
-    
-    // Simulate page loading
-    setTimeout(() => setPageLoading(false), 1000);
   }, [navigation]);
+
+  // Initialize with current location on component mount
+  useEffect(() => {
+    const initializeLocation = async () => {
+      try {
+        setPageLoading(true);
+        await getCurrentLocationSilently();
+      } catch (error) {
+        console.log('Could not get initial location, using default');
+      } finally {
+        setPageLoading(false);
+      }
+    };
+
+    initializeLocation();
+  }, []);
 
   const validateForm = () => {
     const { name, email, alternatePhone, address } = userDetails;
@@ -132,6 +147,46 @@ export default function OnboardDetailsScreen() {
     } catch (error) {
       console.error('Error requesting location permission:', error);
       return false;
+    }
+  };
+
+  const getCurrentLocationSilently = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // For web, use browser geolocation API
+        if (navigator.geolocation) {
+          return new Promise<void>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                const { latitude, longitude } = position.coords;
+                await updateMapRegionSmoothly(latitude, longitude);
+                setInitialLocationSet(true);
+                resolve();
+              },
+              (error) => {
+                console.log('Geolocation error:', error);
+                resolve(); // Don't reject, just continue with default location
+              },
+              { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+            );
+          });
+        }
+        return;
+      }
+      
+      // For mobile, check permission first
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        const { latitude, longitude } = location.coords;
+        await updateMapRegionSmoothly(latitude, longitude);
+        setInitialLocationSet(true);
+      }
+    } catch (error) {
+      console.log('Silent location fetch failed:', error);
+      // Continue with default location
     }
   };
 
@@ -187,8 +242,18 @@ export default function OnboardDetailsScreen() {
     }
   };
 
+  const updateMapRegionSmoothly = async (latitude: number, longitude: number) => {
+    const newRegion = {
+      latitude,
+      longitude,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.02,
+    };
+    setMapRegion(newRegion);
+  };
+
   const handleLocationUpdate = async (latitude: number, longitude: number) => {
-    // Update map region
+    // Update map region smoothly
     const newRegion = {
       latitude,
       longitude,
@@ -222,7 +287,7 @@ export default function OnboardDetailsScreen() {
           }));
         } else {
           // Fallback to a generic address
-          const genericAddress = `Selected Location, Bangalore, Karnataka 560001`;
+          const genericAddress = `Selected Location, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
           setUserDetails(prev => ({
             ...prev,
             address: genericAddress,
@@ -277,7 +342,7 @@ export default function OnboardDetailsScreen() {
     setIsSearching(true);
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM&components=country:in`
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM&components=country:in&types=address`
       );
       const data = await response.json();
       
@@ -303,7 +368,7 @@ export default function OnboardDetailsScreen() {
     // Set new timeout for search
     searchTimeoutRef.current = setTimeout(() => {
       searchPlaces(text);
-    }, 500);
+    }, 300); // Reduced delay for better responsiveness
   };
 
   const selectSearchResult = async (result: SearchResult) => {
@@ -314,22 +379,35 @@ export default function OnboardDetailsScreen() {
       
       // Get place details
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=geometry&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=geometry,formatted_address&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
       );
       const data = await response.json();
       
       if (data.result?.geometry?.location) {
         const { lat, lng } = data.result.geometry.location;
-        await handleLocationUpdate(lat, lng);
         
-        // Animate map to new location
-        if (mapRef.current) {
-          mapRef.current.animateToRegion({
-            latitude: lat,
-            longitude: lng,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }, 1000);
+        // Update address immediately with the formatted address from search
+        setUserDetails(prev => ({
+          ...prev,
+          address: data.result.formatted_address || result.description,
+          latitude: lat,
+          longitude: lng,
+        }));
+        
+        // Update map region
+        const newRegion = {
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        };
+        setMapRegion(newRegion);
+        setSelectedLocation({ latitude: lat, longitude: lng });
+        setLocationSelected(true);
+        
+        // Animate map to new location if map is visible
+        if (mapRef.current && showMap) {
+          mapRef.current.animateToRegion(newRegion, 1000);
         }
       }
     } catch (error) {
@@ -345,17 +423,25 @@ export default function OnboardDetailsScreen() {
 
   const handleMapPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
-    await handleLocationUpdate(latitude, longitude);
     
-    // Animate map to selected location
+    // Smooth animation to selected location
+    const newRegion = {
+      latitude,
+      longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    };
+    
+    setSelectedLocation({ latitude, longitude });
+    setLocationSelected(true);
+    
+    // Animate map smoothly
     if (mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 500);
+      mapRef.current.animateToRegion(newRegion, 500);
     }
+    
+    // Update address
+    await reverseGeocode(latitude, longitude);
   };
 
   const confirmMapSelection = () => {
@@ -486,6 +572,7 @@ export default function OnboardDetailsScreen() {
             showsScale={true}
             mapType="standard"
             onRegionChangeComplete={(region) => setMapRegion(region)}
+            animationEnabled={true}
           >
             {selectedLocation && (
               <Marker
@@ -588,10 +675,40 @@ export default function OnboardDetailsScreen() {
               </View>
             </View>
 
-            {/* Address */}
+            {/* Address with Search */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Delivery Address</Text>
               <View style={styles.addressContainer}>
+                {/* Search Bar for Address */}
+                <View style={styles.addressSearchContainer}>
+                  <View style={styles.addressSearchBar}>
+                    <Search size={20} color="#687b82" />
+                    <TextInput
+                      style={styles.addressSearchInput}
+                      placeholder="Search for your address..."
+                      placeholderTextColor="#687b82"
+                      value={searchQuery}
+                      onChangeText={handleSearchQueryChange}
+                    />
+                    {isSearching && (
+                      <ActivityIndicator size="small" color="#4fa3c4" />
+                    )}
+                  </View>
+                  
+                  {/* Search Results */}
+                  {showSearchResults && searchResults.length > 0 && (
+                    <View style={styles.addressSearchResults}>
+                      <FlatList
+                        data={searchResults.slice(0, 5)} // Limit to 5 results
+                        renderItem={renderSearchResult}
+                        keyExtractor={(item) => item.place_id}
+                        keyboardShouldPersistTaps="handled"
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* Address Input */}
                 <View style={[styles.inputWrapper, styles.addressInputWrapper]}>
                   <MapPin size={20} color="#687b82" />
                   <TextInput
@@ -771,6 +888,39 @@ const styles = StyleSheet.create({
   },
   addressContainer: {
     gap: 12,
+  },
+  addressSearchContainer: {
+    position: 'relative',
+  },
+  addressSearchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f3f4',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  addressSearchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#121516',
+  },
+  addressSearchResults: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+    maxHeight: 200,
   },
   addressInputWrapper: {
     alignItems: 'flex-start',

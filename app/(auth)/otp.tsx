@@ -102,9 +102,12 @@ const OTPScreen = () => {
             try {
                 const result = await loginWithOTP(phone as string, otpString);
                 if (result.success) {
-                    // Success! The auth context will handle navigation
-                    // Don't navigate manually - let the index screen handle it
-                    console.log('OTP verification successful');
+                    console.log('OTP verification successful, navigating...');
+                    // Small delay to ensure state is updated
+                    setTimeout(() => {
+                        // Don't navigate manually - let the index screen handle it based on auth state
+                        router.replace('/');
+                    }, 100);
                 } else {
                     Alert.alert('Error', result.error || 'Invalid OTP. Please try again.');
                     // Clear OTP on error
