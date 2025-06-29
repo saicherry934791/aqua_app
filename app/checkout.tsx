@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,20 +8,19 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { CreditCard, MapPin, User, Phone, Mail } from 'lucide-react-native';
+import { CreditCard, MapPin, User, Phone, Navigation, Check } from 'lucide-react-native';
 import { razorpayService } from '@/services/razorpay';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
 
 interface ShippingInfo {
   fullName: string;
-  email: string;
   phone: string;
   address: string;
-  city: string;
-  state: string;
-  pincode: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface CheckoutItem {
@@ -39,17 +38,15 @@ export default function CheckoutScreen() {
   const { directCheckout, checkoutData } = useLocalSearchParams();
   
   const [loading, setLoading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [locationSelected, setLocationSelected] = useState(false);
   
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
     fullName: '',
-    email: '',
     phone: '',
     address: '',
-    city: '',
-    state: '',
-    pincode: '',
   });
 
   // Initialize checkout data
@@ -70,7 +67,9 @@ export default function CheckoutScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text className="text-2xl font-grotesk-bold text-[#121516]">CHECKOUT</Text>
+        <Text style={{ fontSize: 20, fontFamily: 'SpaceGrotesk_700Bold', color: '#121516' }}>
+          CHECKOUT
+        </Text>
       ),
       headerTitleAlign: 'center',
       headerLeft: () => (
@@ -82,36 +81,88 @@ export default function CheckoutScreen() {
   }, [navigation]);
 
   const validateForm = () => {
-    const required = ['fullName', 'email', 'phone', 'address', 'city', 'state', 'pincode'];
-    for (const field of required) {
-      if (!shippingInfo[field as keyof ShippingInfo].trim()) {
-        Alert.alert('Error', `Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-        return false;
-      }
-    }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(shippingInfo.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+    if (!shippingInfo.fullName.trim()) {
+      Alert.alert('Error', 'Please enter your full name');
       return false;
     }
 
-    // Phone validation
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!phoneRegex.test(shippingInfo.phone)) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return false;
     }
 
-    // Pincode validation
-    const pincodeRegex = /^\d{6}$/;
-    if (!pincodeRegex.test(shippingInfo.pincode)) {
-      Alert.alert('Error', 'Please enter a valid 6-digit pincode');
+    if (!shippingInfo.address.trim()) {
+      Alert.alert('Error', 'Please select your delivery address');
       return false;
     }
 
     return true;
+  };
+
+  const getCurrentLocation = async () => {
+    try {
+      setLocationLoading(true);
+      
+      if (Platform.OS === 'web') {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            async (position) => {
+              const { latitude, longitude } = position.coords;
+              await reverseGeocode(latitude, longitude);
+              setLocationLoading(false);
+              Alert.alert('Success', 'Current location detected!');
+            },
+            (error) => {
+              console.error('Geolocation error:', error);
+              setLocationLoading(false);
+              Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+          );
+        } else {
+          setLocationLoading(false);
+          Alert.alert('Error', 'Geolocation is not supported by this browser.');
+        }
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
+      );
+      const data = await response.json();
+      
+      if (data.results && data.results.length > 0) {
+        const address = data.results[0].formatted_address;
+        setShippingInfo(prev => ({
+          ...prev,
+          address,
+          latitude,
+          longitude,
+        }));
+        setLocationSelected(true);
+      }
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+    }
+  };
+
+  const openMapPicker = () => {
+    // Navigate to a simple map picker screen
+    router.push({
+      pathname: '/map-picker',
+      params: {
+        returnTo: '/checkout',
+      },
+    });
   };
 
   const handlePayment = async () => {
@@ -120,9 +171,11 @@ export default function CheckoutScreen() {
     setLoading(true);
     try {
       const totalAmount = total;
+      const deliveryFee = total > 500 ? 0 : 50;
+      const finalTotal = totalAmount + deliveryFee;
       
       // Create order
-      const order = await razorpayService.createOrder(totalAmount);
+      const order = await razorpayService.createOrder(finalTotal);
       
       // Prepare Razorpay options
       const options = {
@@ -130,11 +183,11 @@ export default function CheckoutScreen() {
         image: 'https://your-logo-url.com/logo.png',
         currency: 'INR',
         key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_your_key_here',
-        amount: totalAmount * 100, // amount in paise
+        amount: finalTotal * 100,
         name: 'AquaHome',
         order_id: order.order_id,
         prefill: {
-          email: shippingInfo.email,
+          email: 'customer@example.com',
           contact: shippingInfo.phone,
           name: shippingInfo.fullName,
         },
@@ -155,13 +208,12 @@ export default function CheckoutScreen() {
         );
 
         if (isVerified) {
-          // Payment successful
           router.replace({
             pathname: '/order-confirmation',
             params: {
               paymentId: paymentResult.razorpay_payment_id,
               orderId: paymentResult.razorpay_order_id,
-              amount: totalAmount.toString(),
+              amount: finalTotal.toString(),
             },
           });
         } else {
@@ -180,184 +232,410 @@ export default function CheckoutScreen() {
   const finalTotal = total + deliveryFee;
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Shipping Information */}
-        <View className="px-4 py-6">
-          <View className="flex-row items-center mb-4">
-            <MapPin size={24} color="#4fa3c4" />
-            <Text className="text-xl font-grotesk-bold text-[#121516] ml-2">
-              Shipping Information
-            </Text>
-          </View>
-
-          <View className="space-y-4">
-            <View>
-              <Text className="text-base font-grotesk-medium text-[#121516] mb-2">Full Name</Text>
-              <View className="flex-row items-center bg-[#f1f3f4] rounded-lg px-4 py-3">
-                <User size={20} color="#687b82" />
-                <TextInput
-                  value={shippingInfo.fullName}
-                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, fullName: text }))}
-                  placeholder="Enter your full name"
-                  placeholderTextColor="#687b82"
-                  className="flex-1 ml-3 text-base font-grotesk text-[#121516]"
-                />
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-base font-grotesk-medium text-[#121516] mb-2">Email</Text>
-              <View className="flex-row items-center bg-[#f1f3f4] rounded-lg px-4 py-3">
-                <Mail size={20} color="#687b82" />
-                <TextInput
-                  value={shippingInfo.email}
-                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, email: text }))}
-                  placeholder="Enter your email"
-                  placeholderTextColor="#687b82"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  className="flex-1 ml-3 text-base font-grotesk text-[#121516]"
-                />
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-base font-grotesk-medium text-[#121516] mb-2">Phone Number</Text>
-              <View className="flex-row items-center bg-[#f1f3f4] rounded-lg px-4 py-3">
-                <Phone size={20} color="#687b82" />
-                <TextInput
-                  value={shippingInfo.phone}
-                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, phone: text }))}
-                  placeholder="Enter your phone number"
-                  placeholderTextColor="#687b82"
-                  keyboardType="numeric"
-                  maxLength={10}
-                  className="flex-1 ml-3 text-base font-grotesk text-[#121516]"
-                />
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-base font-grotesk-medium text-[#121516] mb-2">Address</Text>
-              <TextInput
-                value={shippingInfo.address}
-                onChangeText={(text) => setShippingInfo(prev => ({ ...prev, address: text }))}
-                placeholder="Enter your complete address"
-                placeholderTextColor="#687b82"
-                multiline
-                numberOfLines={3}
-                className="bg-[#f1f3f4] rounded-lg px-4 py-3 text-base font-grotesk text-[#121516]"
-                textAlignVertical="top"
-              />
-            </View>
-
-            <View className="flex-row space-x-3">
-              <View className="flex-1">
-                <Text className="text-base font-grotesk-medium text-[#121516] mb-2">City</Text>
-                <TextInput
-                  value={shippingInfo.city}
-                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, city: text }))}
-                  placeholder="City"
-                  placeholderTextColor="#687b82"
-                  className="bg-[#f1f3f4] rounded-lg px-4 py-3 text-base font-grotesk text-[#121516]"
-                />
-              </View>
-              <View className="flex-1">
-                <Text className="text-base font-grotesk-medium text-[#121516] mb-2">State</Text>
-                <TextInput
-                  value={shippingInfo.state}
-                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, state: text }))}
-                  placeholder="State"
-                  placeholderTextColor="#687b82"
-                  className="bg-[#f1f3f4] rounded-lg px-4 py-3 text-base font-grotesk text-[#121516]"
-                />
-              </View>
-            </View>
-
-            <View>
-              <Text className="text-base font-grotesk-medium text-[#121516] mb-2">Pincode</Text>
-              <TextInput
-                value={shippingInfo.pincode}
-                onChangeText={(text) => setShippingInfo(prev => ({ ...prev, pincode: text }))}
-                placeholder="Enter pincode"
-                placeholderTextColor="#687b82"
-                keyboardType="numeric"
-                maxLength={6}
-                className="bg-[#f1f3f4] rounded-lg px-4 py-3 text-base font-grotesk text-[#121516]"
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Order Summary */}
-        <View className="px-4 py-6 bg-[#f8f9fa]">
-          <Text className="text-xl font-grotesk-bold text-[#121516] mb-4">
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        {/* Order Summary Card */}
+        <View style={{
+          margin: 16,
+          backgroundColor: '#f8f9fa',
+          borderRadius: 16,
+          padding: 20,
+        }}>
+          <Text style={{
+            fontSize: 20,
+            fontFamily: 'SpaceGrotesk_700Bold',
+            color: '#121516',
+            marginBottom: 16,
+          }}>
             Order Summary
           </Text>
 
           {items.map((item) => (
-            <View key={item.id} className="flex-row justify-between items-center py-2">
-              <View className="flex-1">
-                <Text className="text-base font-grotesk-medium text-[#121516]">
-                  {item.name} x {item.quantity}
+            <View key={item.id} style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingVertical: 8,
+            }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontFamily: 'SpaceGrotesk_600SemiBold',
+                  color: '#121516',
+                }}>
+                  {item.name}
                 </Text>
-                <Text className="text-sm font-grotesk text-[#687b82]">
-                  {item.type === 'subscription' ? 'Monthly Rental' : 'One-time Purchase'}
+                <Text style={{
+                  fontSize: 14,
+                  fontFamily: 'SpaceGrotesk_400Regular',
+                  color: '#687b82',
+                  marginTop: 2,
+                }}>
+                  {item.type === 'subscription' ? 'Monthly Rental' : 'One-time Purchase'} • Qty: {item.quantity}
                 </Text>
               </View>
-              <Text className="text-base font-grotesk-bold text-[#121516]">
-                ₹{(item.price * item.quantity).toFixed(2)}
+              <Text style={{
+                fontSize: 18,
+                fontFamily: 'SpaceGrotesk_700Bold',
+                color: '#121516',
+              }}>
+                ₹{(item.price * item.quantity).toLocaleString()}
               </Text>
             </View>
           ))}
 
-          <View className="border-t border-[#e1e5e7] mt-4 pt-4">
-            <View className="flex-row justify-between items-center py-1">
-              <Text className="text-base font-grotesk text-[#687b82]">Subtotal</Text>
-              <Text className="text-base font-grotesk text-[#121516]">₹{total.toFixed(2)}</Text>
-            </View>
-            <View className="flex-row justify-between items-center py-1">
-              <Text className="text-base font-grotesk text-[#687b82]">
-                Delivery Fee {total > 500 && '(Free for orders above ₹500)'}
+          <View style={{
+            borderTopWidth: 1,
+            borderTopColor: '#e1e5e7',
+            marginTop: 16,
+            paddingTop: 16,
+          }}>
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: 8,
+            }}>
+              <Text style={{
+                fontSize: 16,
+                fontFamily: 'SpaceGrotesk_400Regular',
+                color: '#687b82',
+              }}>
+                Subtotal
               </Text>
-              <Text className="text-base font-grotesk text-[#121516]">
-                {deliveryFee === 0 ? 'Free' : `₹${deliveryFee.toFixed(2)}`}
+              <Text style={{
+                fontSize: 16,
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                color: '#121516',
+              }}>
+                ₹{total.toLocaleString()}
               </Text>
             </View>
-            <View className="flex-row justify-between items-center py-2 border-t border-[#e1e5e7] mt-2">
-              <Text className="text-lg font-grotesk-bold text-[#121516]">Total</Text>
-              <Text className="text-lg font-grotesk-bold text-[#121516]">₹{finalTotal.toFixed(2)}</Text>
+            
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: 12,
+            }}>
+              <Text style={{
+                fontSize: 16,
+                fontFamily: 'SpaceGrotesk_400Regular',
+                color: '#687b82',
+              }}>
+                Delivery Fee {total > 500 && '(Free above ₹500)'}
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                color: deliveryFee === 0 ? '#4fa3c4' : '#121516',
+              }}>
+                {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
+              </Text>
+            </View>
+
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              paddingTop: 12,
+              borderTopWidth: 1,
+              borderTopColor: '#e1e5e7',
+            }}>
+              <Text style={{
+                fontSize: 20,
+                fontFamily: 'SpaceGrotesk_700Bold',
+                color: '#121516',
+              }}>
+                Total
+              </Text>
+              <Text style={{
+                fontSize: 20,
+                fontFamily: 'SpaceGrotesk_700Bold',
+                color: '#4fa3c4',
+              }}>
+                ₹{finalTotal.toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Delivery Information */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
+          <Text style={{
+            fontSize: 20,
+            fontFamily: 'SpaceGrotesk_700Bold',
+            color: '#121516',
+            marginBottom: 20,
+          }}>
+            Delivery Information
+          </Text>
+
+          {/* Full Name */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 16,
+              fontFamily: 'SpaceGrotesk_600SemiBold',
+              color: '#121516',
+              marginBottom: 8,
+            }}>
+              Full Name
+            </Text>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#f8f9fa',
+              borderRadius: 12,
+              paddingHorizontal: 16,
+              paddingVertical: 16,
+              borderWidth: 1,
+              borderColor: '#e1e5e7',
+            }}>
+              <User size={20} color="#687b82" />
+              <TextInput
+                value={shippingInfo.fullName}
+                onChangeText={(text) => setShippingInfo(prev => ({ ...prev, fullName: text }))}
+                placeholder="Enter your full name"
+                placeholderTextColor="#687b82"
+                style={{
+                  flex: 1,
+                  marginLeft: 12,
+                  fontSize: 16,
+                  fontFamily: 'SpaceGrotesk_400Regular',
+                  color: '#121516',
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Phone Number */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 16,
+              fontFamily: 'SpaceGrotesk_600SemiBold',
+              color: '#121516',
+              marginBottom: 8,
+            }}>
+              Phone Number
+            </Text>
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: '#f8f9fa',
+              borderRadius: 12,
+              paddingHorizontal: 16,
+              paddingVertical: 16,
+              borderWidth: 1,
+              borderColor: '#e1e5e7',
+            }}>
+              <Phone size={20} color="#687b82" />
+              <Text style={{
+                fontSize: 16,
+                fontFamily: 'SpaceGrotesk_600SemiBold',
+                color: '#121516',
+                marginLeft: 12,
+                marginRight: 8,
+              }}>
+                +91
+              </Text>
+              <TextInput
+                value={shippingInfo.phone}
+                onChangeText={(text) => setShippingInfo(prev => ({ ...prev, phone: text }))}
+                placeholder="Enter your phone number"
+                placeholderTextColor="#687b82"
+                keyboardType="numeric"
+                maxLength={10}
+                style={{
+                  flex: 1,
+                  fontSize: 16,
+                  fontFamily: 'SpaceGrotesk_400Regular',
+                  color: '#121516',
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Address */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 16,
+              fontFamily: 'SpaceGrotesk_600SemiBold',
+              color: '#121516',
+              marginBottom: 8,
+            }}>
+              Delivery Address
+            </Text>
+            
+            <View style={{
+              backgroundColor: '#f8f9fa',
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#e1e5e7',
+              overflow: 'hidden',
+            }}>
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                paddingHorizontal: 16,
+                paddingVertical: 16,
+              }}>
+                <MapPin size={20} color="#687b82" style={{ marginTop: 2 }} />
+                <TextInput
+                  value={shippingInfo.address}
+                  onChangeText={(text) => setShippingInfo(prev => ({ ...prev, address: text }))}
+                  placeholder="Enter your delivery address"
+                  placeholderTextColor="#687b82"
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  style={{
+                    flex: 1,
+                    marginLeft: 12,
+                    fontSize: 16,
+                    fontFamily: 'SpaceGrotesk_400Regular',
+                    color: '#121516',
+                    minHeight: 60,
+                  }}
+                />
+                {locationSelected && (
+                  <View style={{
+                    backgroundColor: '#e8f4f8',
+                    borderRadius: 8,
+                    padding: 4,
+                    marginLeft: 8,
+                    marginTop: 2,
+                  }}>
+                    <Check size={16} color="#4fa3c4" />
+                  </View>
+                )}
+              </View>
+              
+              <View style={{
+                flexDirection: 'row',
+                borderTopWidth: 1,
+                borderTopColor: '#e1e5e7',
+              }}>
+                <TouchableOpacity
+                  onPress={getCurrentLocation}
+                  disabled={locationLoading}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 12,
+                    backgroundColor: '#e8f4f8',
+                  }}
+                >
+                  {locationLoading ? (
+                    <ActivityIndicator size="small" color="#4fa3c4" />
+                  ) : (
+                    <>
+                      <Navigation size={16} color="#4fa3c4" />
+                      <Text style={{
+                        fontSize: 14,
+                        fontFamily: 'SpaceGrotesk_600SemiBold',
+                        color: '#4fa3c4',
+                        marginLeft: 6,
+                      }}>
+                        Current Location
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  onPress={openMapPicker}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 12,
+                    backgroundColor: '#fff3e0',
+                    borderLeftWidth: 1,
+                    borderLeftColor: '#e1e5e7',
+                  }}
+                >
+                  <MapPin size={16} color="#ff9800" />
+                  <Text style={{
+                    fontSize: 14,
+                    fontFamily: 'SpaceGrotesk_600SemiBold',
+                    color: '#ff9800',
+                    marginLeft: 6,
+                  }}>
+                    Pick on Map
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
       </ScrollView>
 
       {/* Payment Button */}
-      <View className="bg-white border-t border-[#f1f3f4] px-4 py-6">
+      <View style={{
+        backgroundColor: 'white',
+        borderTopWidth: 1,
+        borderTopColor: '#f1f3f4',
+        paddingHorizontal: 16,
+        paddingVertical: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 8,
+      }}>
         <TouchableOpacity
           onPress={handlePayment}
           disabled={loading}
-          className={`h-14 rounded-full items-center justify-center flex-row ${
-            loading ? 'bg-[#e1e5e7]' : 'bg-[#4fa3c4]'
-          }`}
+          style={{
+            height: 56,
+            borderRadius: 16,
+            backgroundColor: loading ? '#e1e5e7' : '#4fa3c4',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#4fa3c4',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: loading ? 0 : 0.3,
+            shadowRadius: 8,
+            elevation: loading ? 0 : 8,
+          }}
         >
           {loading ? (
             <>
               <ActivityIndicator color="white" size="small" />
-              <Text className="text-lg font-grotesk-bold text-white ml-2">
+              <Text style={{
+                fontSize: 18,
+                fontFamily: 'SpaceGrotesk_700Bold',
+                color: 'white',
+                marginLeft: 8,
+              }}>
                 Processing...
               </Text>
             </>
           ) : (
             <>
               <CreditCard size={24} color="white" />
-              <Text className="text-lg font-grotesk-bold text-white ml-2">
-                Pay ₹{finalTotal.toFixed(2)}
+              <Text style={{
+                fontSize: 18,
+                fontFamily: 'SpaceGrotesk_700Bold',
+                color: 'white',
+                marginLeft: 8,
+              }}>
+                Pay ₹{finalTotal.toLocaleString()}
               </Text>
             </>
           )}
         </TouchableOpacity>
+        
+        <Text style={{
+          fontSize: 12,
+          fontFamily: 'SpaceGrotesk_400Regular',
+          color: '#687b82',
+          textAlign: 'center',
+          marginTop: 8,
+        }}>
+          Secure payment powered by Razorpay
+        </Text>
       </View>
     </SafeAreaView>
   );
