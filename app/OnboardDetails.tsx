@@ -647,7 +647,7 @@ export default function OnboardDetailsScreen() {
 
             {/* Address with Search */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Delivery Address</Text>
+              <Text style={styles.label}>Address</Text>
               <View style={styles.addressContainer}>
                 {/* Search Bar for Address */}
                 <View style={styles.addressSearchContainer}>
@@ -683,7 +683,7 @@ export default function OnboardDetailsScreen() {
                   <MapPin size={20} color="#687b82" />
                   <TextInput
                     style={[styles.input, styles.addressInput]}
-                    placeholder="Enter your complete delivery address"
+                    placeholder="Enter your complete address"
                     placeholderTextColor="#687b82"
                     value={userDetails.address}
                     onChangeText={(text) => setUserDetails(prev => ({ ...prev, address: text }))}
