@@ -15,11 +15,24 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRouter } from 'expo-router';
-import { MapPin, User, Phone, Mail, Navigation, Check, X, Search } from 'lucide-react-native';
+import { MapPin, User, Phone, Mail, Navigation, Check, Search } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import * as Location from 'expo-location';
 import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+
+// Conditional import for maps - only import on native platforms
+let MapView: any = null;
+let Marker: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
+    const Maps = require('react-native-maps');
+    MapView = Maps.default;
+    Marker = Maps.Marker;
+  } catch (error) {
+    console.log('react-native-maps not available');
+  }
+}
 
 interface UserDetails {
   name: string;
@@ -57,11 +70,11 @@ export default function OnboardDetailsScreen() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [initialLocationSet, setInitialLocationSet] = useState(false);
   
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   
   // Default to a major city (Bangalore) but will be updated with current location
-  const [mapRegion, setMapRegion] = useState<Region>({
+  const [mapRegion, setMapRegion] = useState({
     latitude: 12.9716,
     longitude: 77.5946,
     latitudeDelta: 0.05,
@@ -406,7 +419,7 @@ export default function OnboardDetailsScreen() {
         setLocationSelected(true);
         
         // Animate map to new location if map is visible
-        if (mapRef.current && showMap) {
+        if (mapRef.current && showMap && Platform.OS !== 'web') {
           mapRef.current.animateToRegion(newRegion, 1000);
         }
       }
@@ -416,6 +429,15 @@ export default function OnboardDetailsScreen() {
   };
 
   const openMapPicker = () => {
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Map Picker',
+        'For the best map experience, please use the mobile app. You can still enter your address manually or use current location.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     setShowMap(true);
     setSearchQuery('');
     setShowSearchResults(false);
@@ -510,7 +532,7 @@ export default function OnboardDetailsScreen() {
     );
   }
 
-  if (showMap) {
+  if (showMap && Platform.OS !== 'web' && MapView) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.mapContainer}>
@@ -520,7 +542,7 @@ export default function OnboardDetailsScreen() {
                 style={styles.mapCloseButton}
                 onPress={() => setShowMap(false)}
               >
-                <X size={24} color="#687b82" />
+                <Text style={{ fontSize: 24, color: '#687b82' }}>✕</Text>
               </TouchableOpacity>
               <View style={styles.mapTitleContainer}>
                 <Text style={styles.mapTitle}>Select Your Location</Text>
@@ -533,7 +555,7 @@ export default function OnboardDetailsScreen() {
           <MapView
             ref={mapRef}
             style={styles.map}
-            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+            provider={Platform.OS === 'android' ? 'google' : undefined}
             region={mapRegion}
             onPress={handleMapPress}
             showsUserLocation={true}
@@ -542,7 +564,6 @@ export default function OnboardDetailsScreen() {
             showsScale={true}
             mapType="standard"
             onRegionChangeComplete={(region) => setMapRegion(region)}
-            animationEnabled={true}
           >
             {selectedLocation && (
               <Marker
@@ -647,7 +668,7 @@ export default function OnboardDetailsScreen() {
 
             {/* Address with Search */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Address</Text>
+              <Text style={styles.label}>Delivery Address</Text>
               <View style={styles.addressContainer}>
                 {/* Search Bar for Address */}
                 <View style={styles.addressSearchContainer}>
@@ -683,7 +704,7 @@ export default function OnboardDetailsScreen() {
                   <MapPin size={20} color="#687b82" />
                   <TextInput
                     style={[styles.input, styles.addressInput]}
-                    placeholder="Enter your complete address"
+                    placeholder="Enter your complete delivery address"
                     placeholderTextColor="#687b82"
                     value={userDetails.address}
                     onChangeText={(text) => setUserDetails(prev => ({ ...prev, address: text }))}
@@ -719,7 +740,9 @@ export default function OnboardDetailsScreen() {
                     onPress={openMapPicker}
                   >
                     <MapPin size={16} color="#4fa3c4" />
-                    <Text style={styles.locationButtonText}>Pick on Map</Text>
+                    <Text style={styles.locationButtonText}>
+                      {Platform.OS === 'web' ? 'Map (Mobile Only)' : 'Pick on Map'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1020,31 +1043,6 @@ const styles = StyleSheet.create({
     fontFamily: 'SpaceGrotesk_400Regular',
     color: '#687b82',
   },
-  searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f4',
-  },
-  searchResultIcon: {
-    marginRight: 12,
-  },
-  searchResultText: {
-    flex: 1,
-  },
-  searchResultMain: {
-    fontSize: 16,
-    fontFamily: 'SpaceGrotesk_500Medium',
-    color: '#121516',
-    marginBottom: 2,
-  },
-  searchResultSecondary: {
-    fontSize: 14,
-    fontFamily: 'SpaceGrotesk_400Regular',
-    color: '#687b82',
-  },
   map: {
     flex: 1,
   },
@@ -1109,5 +1107,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'SpaceGrotesk_600SemiBold',
     color: 'white',
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f4',
+  },
+  searchResultIcon: {
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+  },
+  searchResultMain: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_500Medium',
+    color: '#121516',
+    marginBottom: 2,
+  },
+  searchResultSecondary: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
   },
 });
