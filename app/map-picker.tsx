@@ -1,70 +1,44 @@
-import React, { useState, useLayoutEffect, useRef } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  TextInput,
   SafeAreaView,
-  Platform,
+  StyleSheet,
   Alert,
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
 } from 'react-native';
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { Check, X } from 'lucide-react-native';
+import { Search, X, MapPin } from 'lucide-react-native';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
 
-// For web compatibility, we'll create a simple map placeholder
-const MapView = Platform.OS === 'web' ? 
-  ({ children, onPress, style }: any) => (
-    <View 
-      style={[style, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}
-      onTouchEnd={onPress}
-    >
-      <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', padding: 20 }}>
-        Interactive Map{'\n'}Tap anywhere to select location
-      </Text>
-      {children}
-    </View>
-  ) : 
-  require('react-native-maps').default;
-
-const Marker = Platform.OS === 'web' ? 
-  ({ coordinate }: any) => (
-    <View style={{
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      transform: [{ translateX: -12 }, { translateY: -24 }],
-      width: 24,
-      height: 24,
-      backgroundColor: '#ff0000',
-      borderRadius: 12,
-      borderWidth: 2,
-      borderColor: 'white',
-    }} />
-  ) : 
-  require('react-native-maps').Marker;
+interface SearchResult {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
+}
 
 export default function MapPickerScreen() {
   const navigation = useNavigation();
   const router = useRouter();
-  const { returnTo } = useLocalSearchParams();
+  const { onLocationSelect } = useLocalSearchParams();
   
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
-  const [address, setAddress] = useState('');
-  
-  // Default map region (Bangalore)
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 12.9716,
-    longitude: 77.5946,
-    latitudeDelta: 0.05,
-    longitudeDelta: 0.05,
-  });
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ fontSize: 20, fontFamily: 'SpaceGrotesk_700Bold', color: '#121516' }}>
-          SELECT LOCATION
-        </Text>
+        <Text style={styles.headerTitle}>Select Location</Text>
       ),
       headerTitleAlign: 'center',
       headerLeft: () => (
@@ -75,180 +49,342 @@ export default function MapPickerScreen() {
     });
   }, [navigation]);
 
-  const handleMapPress = async (event: any) => {
-    let latitude, longitude;
-    
-    if (Platform.OS === 'web') {
-      // For web, simulate coordinates based on click position
-      latitude = mapRegion.latitude + (Math.random() - 0.5) * 0.01;
-      longitude = mapRegion.longitude + (Math.random() - 0.5) * 0.01;
-    } else {
-      const coords = event.nativeEvent.coordinate;
-      latitude = coords.latitude;
-      longitude = coords.longitude;
+  const searchPlaces = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
     }
-    
-    setSelectedLocation({ latitude, longitude });
-    
-    // Reverse geocode to get address
-    await reverseGeocode(latitude, longitude);
-  };
 
-  const reverseGeocode = async (latitude: number, longitude: number) => {
+    setIsSearching(true);
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM&components=country:in&types=address`
       );
       const data = await response.json();
       
-      if (data.results && data.results.length > 0) {
-        setAddress(data.results[0].formatted_address);
-      } else {
-        setAddress(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      if (data.predictions) {
+        setSearchResults(data.predictions);
+        setShowSearchResults(true);
       }
     } catch (error) {
-      console.error('Error reverse geocoding:', error);
-      setAddress(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      console.error('Error searching places:', error);
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const confirmLocation = () => {
-    if (selectedLocation && address) {
-      // Navigate back with the selected address
-      router.back();
-      // In a real app, you would pass this data back to the checkout screen
-      Alert.alert('Location Selected', address);
+  const handleSearchQueryChange = (text: string) => {
+    setSearchQuery(text);
+    
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      searchPlaces(text);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  };
+
+  const selectSearchResult = async (result: SearchResult) => {
+    try {
+      setSearchQuery(result.description);
+      setShowSearchResults(false);
+      Keyboard.dismiss();
+      
+      // Get place details
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=geometry,formatted_address&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
+      );
+      const data = await response.json();
+      
+      if (data.result?.geometry?.location) {
+        const { lat, lng } = data.result.geometry.location;
+        const location = {
+          latitude: lat,
+          longitude: lng,
+          address: data.result.formatted_address || result.description,
+        };
+        
+        setSelectedLocation({ latitude: lat, longitude: lng });
+        
+        // Return to checkout with selected location
+        router.back();
+        // Note: In a real implementation, you'd pass this data back to the checkout screen
+        Alert.alert('Location Selected', `Selected: ${location.address}`);
+      }
+    } catch (error) {
+      console.error('Error selecting search result:', error);
+      Alert.alert('Error', 'Failed to select location. Please try again.');
     }
   };
+
+  const renderSearchResult = ({ item }: { item: SearchResult }) => (
+    <TouchableOpacity
+      style={styles.searchResultItem}
+      onPress={() => selectSearchResult(item)}
+    >
+      <MapPin size={16} color="#4fa3c4" style={styles.searchResultIcon} />
+      <View style={styles.searchResultText}>
+        <Text style={styles.searchResultMain}>{item.structured_formatting.main_text}</Text>
+        <Text style={styles.searchResultSecondary}>{item.structured_formatting.secondary_text}</Text>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      {/* Instructions */}
-      <View style={{
-        backgroundColor: '#e8f4f8',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#e1e5e7',
-      }}>
-        <Text style={{
-          fontSize: 16,
-          fontFamily: 'SpaceGrotesk_600SemiBold',
-          color: '#4fa3c4',
-          textAlign: 'center',
-        }}>
-          Tap on the map to select your delivery location
-        </Text>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="#687b82" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for places..."
+              placeholderTextColor="#687b82"
+              value={searchQuery}
+              onChangeText={handleSearchQueryChange}
+            />
+            {isSearching && (
+              <ActivityIndicator size="small" color="#4fa3c4" />
+            )}
+          </View>
+          
+          {/* Search Results */}
+          {showSearchResults && searchResults.length > 0 && (
+            <View style={styles.searchResultsContainer}>
+              <FlatList
+                data={searchResults}
+                renderItem={renderSearchResult}
+                keyExtractor={(item) => item.place_id}
+                style={styles.searchResultsList}
+                keyboardShouldPersistTaps="handled"
+              />
+            </View>
+          )}
+        </View>
+
+        {/* Web Map Placeholder */}
+        <View style={styles.mapPlaceholder}>
+          <View style={styles.mapPlaceholderContent}>
+            <MapPin size={48} color="#4fa3c4" />
+            <Text style={styles.mapPlaceholderTitle}>Interactive Map</Text>
+            <Text style={styles.mapPlaceholderSubtitle}>
+              Use the search above to find and select your location
+            </Text>
+            <Text style={styles.webNote}>
+              📱 For full map functionality, use the mobile app
+            </Text>
+          </View>
+        </View>
+
+        {selectedLocation && (
+          <View style={styles.selectedLocationInfo}>
+            <Text style={styles.selectedLocationText}>
+              📍 Location Selected
+            </Text>
+            <Text style={styles.coordinatesText}>
+              {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
+            </Text>
+          </View>
+        )}
       </View>
 
-      {/* Map */}
-      <MapView
-        style={{ flex: 1 }}
-        region={mapRegion}
-        onPress={handleMapPress}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-      >
-        {selectedLocation && (
-          <Marker
-            coordinate={selectedLocation}
-            pinColor="#ff0000"
-          />
-        )}
-      </MapView>
-
-      {/* Selected Location Info */}
-      {selectedLocation && address && (
-        <View style={{
-          position: 'absolute',
-          bottom: 100,
-          left: 16,
-          right: 16,
-          backgroundColor: 'white',
-          borderRadius: 12,
-          padding: 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 5,
-        }}>
-          <Text style={{
-            fontSize: 16,
-            fontFamily: 'SpaceGrotesk_700Bold',
-            color: '#121516',
-            marginBottom: 4,
-          }}>
-            📍 Selected Location
-          </Text>
-          <Text style={{
-            fontSize: 14,
-            fontFamily: 'SpaceGrotesk_400Regular',
-            color: '#687b82',
-            lineHeight: 20,
-          }}>
-            {address}
-          </Text>
-        </View>
-      )}
-
       {/* Action Buttons */}
-      <View style={{
-        backgroundColor: 'white',
-        borderTopWidth: 1,
-        borderTopColor: '#f1f3f4',
-        paddingHorizontal: 16,
-        paddingVertical: 20,
-        flexDirection: 'row',
-        gap: 12,
-      }}>
+      <View style={styles.actionButtons}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            flex: 1,
-            height: 48,
-            backgroundColor: '#f1f3f4',
-            borderRadius: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          style={styles.cancelButton}
+          onPress={() => router.back()}
         >
-          <X size={20} color="#687b82" />
-          <Text style={{
-            fontSize: 16,
-            fontFamily: 'SpaceGrotesk_600SemiBold',
-            color: '#687b82',
-            marginLeft: 6,
-          }}>
-            Cancel
-          </Text>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          onPress={confirmLocation}
-          disabled={!selectedLocation}
-          style={{
-            flex: 1,
-            height: 48,
-            backgroundColor: selectedLocation ? '#4fa3c4' : '#e1e5e7',
-            borderRadius: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
+          style={[styles.confirmButton, !selectedLocation && styles.confirmButtonDisabled]}
+          onPress={() => {
+            if (selectedLocation) {
+              router.back();
+              Alert.alert('Success', 'Location selected successfully!');
+            }
           }}
+          disabled={!selectedLocation}
         >
-          <Check size={20} color="white" />
-          <Text style={{
-            fontSize: 16,
-            fontFamily: 'SpaceGrotesk_600SemiBold',
-            color: 'white',
-            marginLeft: 6,
-          }}>
-            Confirm
-          </Text>
+          <Text style={styles.confirmButtonText}>Confirm Location</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  searchContainer: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f3f4',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#121516',
+  },
+  searchResultsContainer: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+    maxHeight: 200,
+  },
+  searchResultsList: {
+    maxHeight: 200,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f3f4',
+  },
+  searchResultIcon: {
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+  },
+  searchResultMain: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_500Medium',
+    color: '#121516',
+    marginBottom: 2,
+  },
+  searchResultSecondary: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+  },
+  mapPlaceholder: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: '#e1e5e7',
+    borderStyle: 'dashed',
+  },
+  mapPlaceholderContent: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  mapPlaceholderTitle: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  mapPlaceholderSubtitle: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  webNote: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_500Medium',
+    color: '#4fa3c4',
+    backgroundColor: '#e8f4f8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  selectedLocationInfo: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 16,
+  },
+  selectedLocationText: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#121516',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  coordinatesText: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+    textAlign: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f1f3f4',
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#687b82',
+  },
+  confirmButton: {
+    flex: 1,
+    backgroundColor: '#4fa3c4',
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  confirmButtonDisabled: {
+    backgroundColor: '#e1e5e7',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: 'white',
+  },
+});
