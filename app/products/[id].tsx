@@ -1,6 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ImageBackground, Dimensions, Share, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -14,7 +13,6 @@ import BackArrowIcon from "@/components/icons/BackArrowIcon";
 import { Share as ShareIcon, ShoppingCart } from "lucide-react-native";
 import SkeletonWrapper from "@/components/skeltons/SkeletonWrapper";
 import ProductSkeleton from "@/components/skeltons/ProductSkeleton";
-import { useCart } from "@/contexts/CartContext";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -31,27 +29,21 @@ const productData = {
     name: 'AquaHome Pro',
     description: 'The AquaHome Pro is a state-of-the-art water purifier designed to provide clean, safe, and great-tasting water for your home. With its advanced filtration system, it removes impurities, contaminants, and odors, ensuring your family\'s health and well-being.',
     price: 2999,
-    subscriptionPrices: {
-        monthly: 299,
-        quarterly: 799, // 10% discount
-        yearly: 2879, // 20% discount
-    },
+    monthlyRental: 299,
     image: productImages[0],
 };
 
 export default function AquaHomeProductScreen() {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [selectedOption, setSelectedOption] = useState<'product' | 'subscription'>('product');
-    const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'quarterly' | 'yearly'>('monthly');
     const scrollX = useSharedValue(0);
     const scrollY = useSharedValue(0);
-    const addToCartScale = useSharedValue(1);
+    const buyNowScale = useSharedValue(1);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
     const navigation = useNavigation();
     const router = useRouter();
-    const { addToCart } = useCart();
 
     const imageScrollHandler = useAnimatedScrollHandler({
         onScroll: (event) => {
@@ -80,34 +72,35 @@ export default function AquaHomeProductScreen() {
         };
     });
 
-    const addToCartAnimatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: addToCartScale.value }],
+    const buyNowAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: buyNowScale.value }],
     }));
 
-    const handleAddToCartPress = () => {
-        addToCartScale.value = withSpring(0.95, {}, () => {
-            addToCartScale.value = withSpring(1);
+    const handleBuyNowPress = () => {
+        buyNowScale.value = withSpring(0.95, {}, () => {
+            buyNowScale.value = withSpring(1);
         });
 
-        const item = {
-            id: productData.id,
-            name: productData.name,
-            price: selectedOption === 'product' ? productData.price : productData.subscriptionPrices[selectedPlan],
-            image: productData.image,
-            type: selectedOption,
-            ...(selectedOption === 'subscription' && { subscriptionPlan: selectedPlan }),
+        // Navigate directly to checkout with product details
+        const checkoutData = {
+            items: [{
+                id: productData.id,
+                name: productData.name,
+                price: selectedOption === 'product' ? productData.price : productData.monthlyRental,
+                image: productData.image,
+                type: selectedOption,
+                quantity: 1,
+            }],
+            total: selectedOption === 'product' ? productData.price : productData.monthlyRental,
         };
 
-        addToCart(item);
-        
-        Alert.alert(
-            'Added to Cart',
-            `${productData.name} has been added to your cart.`,
-            [
-                { text: 'Continue Shopping', style: 'cancel' },
-                { text: 'View Cart', onPress: () => router.push('/cart') },
-            ]
-        );
+        router.push({
+            pathname: '/checkout',
+            params: {
+                directCheckout: 'true',
+                checkoutData: JSON.stringify(checkoutData),
+            },
+        });
     };
 
     const shareListing = async () => {
@@ -165,16 +158,8 @@ export default function AquaHomeProductScreen() {
         fetchProduct();
     }, []);
 
-    const getDiscountPercentage = (plan: string) => {
-        switch (plan) {
-            case 'quarterly': return 10;
-            case 'yearly': return 20;
-            default: return 0;
-        }
-    };
-
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <View style={{ flex: 1 }}>
             <SkeletonWrapper
                 loading={loading}
                 refreshing={refreshing}
@@ -295,7 +280,7 @@ export default function AquaHomeProductScreen() {
                                     color: '#121516',
                                     marginTop: 4,
                                 }}>
-                                    ₹{productData.subscriptionPrices[selectedPlan].toFixed(2)}
+                                    ₹{productData.monthlyRental.toFixed(2)}
                                 </Text>
                                 <Text style={{
                                     fontSize: 12,
@@ -303,78 +288,10 @@ export default function AquaHomeProductScreen() {
                                     textAlign: 'center',
                                     color: '#687b82',
                                 }}>
-                                    {selectedPlan} billing
+                                    Monthly billing
                                 </Text>
                             </TouchableOpacity>
                         </View>
-
-                        {/* Subscription Plans */}
-                        {selectedOption === 'subscription' && (
-                            <View style={{ gap: 12 }}>
-                                {(['monthly', 'quarterly', 'yearly'] as const).map((plan) => {
-                                    const discount = getDiscountPercentage(plan);
-                                    return (
-                                        <TouchableOpacity
-                                            key={plan}
-                                            onPress={() => setSelectedPlan(plan)}
-                                            style={{
-                                                padding: 16,
-                                                borderRadius: 12,
-                                                borderWidth: 2,
-                                                borderColor: selectedPlan === plan ? '#4fa3c4' : '#e1e5e7',
-                                                backgroundColor: selectedPlan === plan ? '#e8f4f8' : 'white',
-                                            }}
-                                        >
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <View style={{ flex: 1 }}>
-                                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                        <Text style={{
-                                                            fontSize: 16,
-                                                            fontFamily: 'SpaceGrotesk_700Bold',
-                                                            color: '#121516',
-                                                            textTransform: 'capitalize',
-                                                        }}>
-                                                            {plan} Plan
-                                                        </Text>
-                                                        {discount > 0 && (
-                                                            <View style={{
-                                                                backgroundColor: '#4fa3c4',
-                                                                paddingHorizontal: 8,
-                                                                paddingVertical: 4,
-                                                                borderRadius: 4,
-                                                                marginLeft: 8,
-                                                            }}>
-                                                                <Text style={{
-                                                                    fontSize: 10,
-                                                                    fontFamily: 'SpaceGrotesk_700Bold',
-                                                                    color: 'white',
-                                                                }}>
-                                                                    {discount}% OFF
-                                                                </Text>
-                                                            </View>
-                                                        )}
-                                                    </View>
-                                                    <Text style={{
-                                                        fontSize: 12,
-                                                        fontFamily: 'SpaceGrotesk_400Regular',
-                                                        color: '#687b82',
-                                                    }}>
-                                                        Billed {plan}
-                                                    </Text>
-                                                </View>
-                                                <Text style={{
-                                                    fontSize: 18,
-                                                    fontFamily: 'SpaceGrotesk_700Bold',
-                                                    color: '#121516',
-                                                }}>
-                                                    ₹{productData.subscriptionPrices[plan].toFixed(2)}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        )}
                     </View>
 
                     {/* Description */}
@@ -443,7 +360,7 @@ export default function AquaHomeProductScreen() {
                 paddingHorizontal: 16,
                 paddingVertical: 24,
             }}>
-                <Animated.View style={addToCartAnimatedStyle}>
+                <Animated.View style={buyNowAnimatedStyle}>
                     <TouchableOpacity
                         style={{
                             height: 56,
@@ -453,7 +370,7 @@ export default function AquaHomeProductScreen() {
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}
-                        onPress={handleAddToCartPress}
+                        onPress={handleBuyNowPress}
                     >
                         <ShoppingCart size={20} color="white" />
                         <Text style={{
@@ -462,11 +379,11 @@ export default function AquaHomeProductScreen() {
                             color: 'white',
                             marginLeft: 8,
                         }}>
-                            Add to Cart
+                            Buy Now - ₹{selectedOption === 'product' ? productData.price.toFixed(2) : productData.monthlyRental.toFixed(2)}
                         </Text>
                     </TouchableOpacity>
                 </Animated.View>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }

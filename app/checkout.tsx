@@ -9,9 +9,8 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRouter } from 'expo-router';
+import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
 import { CreditCard, MapPin, User, Phone, Mail } from 'lucide-react-native';
-import { useCart } from '@/contexts/CartContext';
 import { razorpayService } from '@/services/razorpay';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
 
@@ -25,11 +24,24 @@ interface ShippingInfo {
   pincode: string;
 }
 
+interface CheckoutItem {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  type: 'product' | 'subscription';
+  quantity: number;
+}
+
 export default function CheckoutScreen() {
   const navigation = useNavigation();
   const router = useRouter();
-  const { state, clearCart } = useCart();
+  const { directCheckout, checkoutData } = useLocalSearchParams();
+  
   const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<CheckoutItem[]>([]);
+  const [total, setTotal] = useState(0);
+  
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
     fullName: '',
     email: '',
@@ -39,6 +51,21 @@ export default function CheckoutScreen() {
     state: '',
     pincode: '',
   });
+
+  // Initialize checkout data
+  React.useEffect(() => {
+    if (directCheckout === 'true' && checkoutData) {
+      try {
+        const data = JSON.parse(checkoutData as string);
+        setItems(data.items);
+        setTotal(data.total);
+      } catch (error) {
+        console.error('Error parsing checkout data:', error);
+        Alert.alert('Error', 'Invalid checkout data');
+        router.back();
+      }
+    }
+  }, [directCheckout, checkoutData]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -53,22 +80,6 @@ export default function CheckoutScreen() {
       ),
     });
   }, [navigation]);
-
-  const calculateTotal = () => {
-    return state.items.reduce((total, item) => {
-      const discount = getSubscriptionDiscount(item.subscriptionPlan);
-      const discountedPrice = discount > 0 ? item.price * (1 - discount / 100) : item.price;
-      return total + (discountedPrice * item.quantity);
-    }, 0);
-  };
-
-  const getSubscriptionDiscount = (plan?: string) => {
-    switch (plan) {
-      case 'quarterly': return 10;
-      case 'yearly': return 20;
-      default: return 0;
-    }
-  };
 
   const validateForm = () => {
     const required = ['fullName', 'email', 'phone', 'address', 'city', 'state', 'pincode'];
@@ -108,7 +119,7 @@ export default function CheckoutScreen() {
 
     setLoading(true);
     try {
-      const totalAmount = calculateTotal();
+      const totalAmount = total;
       
       // Create order
       const order = await razorpayService.createOrder(totalAmount);
@@ -145,7 +156,6 @@ export default function CheckoutScreen() {
 
         if (isVerified) {
           // Payment successful
-          clearCart();
           router.replace({
             pathname: '/order-confirmation',
             params: {
@@ -166,9 +176,8 @@ export default function CheckoutScreen() {
     }
   };
 
-  const totalAmount = calculateTotal();
-  const deliveryFee = totalAmount > 500 ? 0 : 50;
-  const finalTotal = totalAmount + deliveryFee;
+  const deliveryFee = total > 500 ? 0 : 50;
+  const finalTotal = total + deliveryFee;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -287,37 +296,30 @@ export default function CheckoutScreen() {
             Order Summary
           </Text>
 
-          {state.items.map((item) => {
-            const discount = getSubscriptionDiscount(item.subscriptionPlan);
-            const discountedPrice = discount > 0 ? item.price * (1 - discount / 100) : item.price;
-            
-            return (
-              <View key={`${item.id}-${item.type}-${item.subscriptionPlan}`} className="flex-row justify-between items-center py-2">
-                <View className="flex-1">
-                  <Text className="text-base font-grotesk-medium text-[#121516]">
-                    {item.name} x {item.quantity}
-                  </Text>
-                  {item.subscriptionPlan && (
-                    <Text className="text-sm font-grotesk text-[#687b82]">
-                      {item.subscriptionPlan.charAt(0).toUpperCase() + item.subscriptionPlan.slice(1)} Plan
-                    </Text>
-                  )}
-                </View>
-                <Text className="text-base font-grotesk-bold text-[#121516]">
-                  ₹{(discountedPrice * item.quantity).toFixed(2)}
+          {items.map((item) => (
+            <View key={item.id} className="flex-row justify-between items-center py-2">
+              <View className="flex-1">
+                <Text className="text-base font-grotesk-medium text-[#121516]">
+                  {item.name} x {item.quantity}
+                </Text>
+                <Text className="text-sm font-grotesk text-[#687b82]">
+                  {item.type === 'subscription' ? 'Monthly Rental' : 'One-time Purchase'}
                 </Text>
               </View>
-            );
-          })}
+              <Text className="text-base font-grotesk-bold text-[#121516]">
+                ₹{(item.price * item.quantity).toFixed(2)}
+              </Text>
+            </View>
+          ))}
 
           <View className="border-t border-[#e1e5e7] mt-4 pt-4">
             <View className="flex-row justify-between items-center py-1">
               <Text className="text-base font-grotesk text-[#687b82]">Subtotal</Text>
-              <Text className="text-base font-grotesk text-[#121516]">₹{totalAmount.toFixed(2)}</Text>
+              <Text className="text-base font-grotesk text-[#121516]">₹{total.toFixed(2)}</Text>
             </View>
             <View className="flex-row justify-between items-center py-1">
               <Text className="text-base font-grotesk text-[#687b82]">
-                Delivery Fee {totalAmount > 500 && '(Free for orders above ₹500)'}
+                Delivery Fee {total > 500 && '(Free for orders above ₹500)'}
               </Text>
               <Text className="text-base font-grotesk text-[#121516]">
                 {deliveryFee === 0 ? 'Free' : `₹${deliveryFee.toFixed(2)}`}
