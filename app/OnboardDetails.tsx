@@ -524,38 +524,8 @@ export default function OnboardDetailsScreen() {
               </TouchableOpacity>
               <View style={styles.mapTitleContainer}>
                 <Text style={styles.mapTitle}>Select Your Location</Text>
-                <Text style={styles.mapSubtitle}>Search or tap on the map to select your delivery location</Text>
+                <Text style={styles.mapSubtitle}>Tap on the map to select your delivery location</Text>
               </View>
-            </View>
-            
-            {/* Search Bar */}
-            <View style={styles.mapSearchContainer}>
-              <View style={styles.mapSearchBar}>
-                <Search size={20} color="#687b82" />
-                <TextInput
-                  style={styles.mapSearchInput}
-                  placeholder="Search for places..."
-                  placeholderTextColor="#687b82"
-                  value={searchQuery}
-                  onChangeText={handleSearchQueryChange}
-                />
-                {isSearching && (
-                  <ActivityIndicator size="small" color="#4fa3c4" />
-                )}
-              </View>
-              
-              {/* Search Results */}
-              {showSearchResults && searchResults.length > 0 && (
-                <View style={styles.searchResultsContainer}>
-                  <FlatList
-                    data={searchResults}
-                    renderItem={renderSearchResult}
-                    keyExtractor={(item) => item.place_id}
-                    style={styles.searchResultsList}
-                    keyboardShouldPersistTaps="handled"
-                  />
-                </View>
-              )}
             </View>
           </View>
           
@@ -579,7 +549,7 @@ export default function OnboardDetailsScreen() {
                 coordinate={selectedLocation}
                 title="Selected Location"
                 description="Your delivery address"
-                pinColor="#4fa3c4"
+                pinColor="#ff0000"
               />
             )}
           </MapView>
@@ -1049,44 +1019,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'SpaceGrotesk_400Regular',
     color: '#687b82',
-  },
-  mapSearchContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    position: 'relative',
-  },
-  mapSearchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f3f4',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  mapSearchInput: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
-    color: '#121516',
-  },
-  searchResultsContainer: {
-    position: 'absolute',
-    top: 60,
-    left: 16,
-    right: 16,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    zIndex: 1000,
-    maxHeight: 200,
-  },
-  searchResultsList: {
-    maxHeight: 200,
   },
   searchResultItem: {
     flexDirection: 'row',
