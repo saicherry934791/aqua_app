@@ -89,7 +89,7 @@ const ProductsScreen = () => {
               >
                 <View className="mb-3">
                   <Animated.Image
-                    sharedTransitionTag="productImage"
+               
                     source={{ uri: product.image }}
                     className="w-full aspect-square rounded-xl"
                     resizeMode="cover"

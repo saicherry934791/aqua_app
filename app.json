@@ -3,17 +3,18 @@
     "name": "aquaHomeUi",
     "slug": "aquaHomeUi",
     "version": "1.0.0",
-    "jsEngine": "jsc",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "aquahomeui",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "config": {
         "googleMapsApiKey": "AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM"
-      }
+      },
+      "bundleIdentifier": "com.cherry93479.aquaHomeUi"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +26,12 @@
         "googleMaps": {
           "apiKey": "AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM"
         }
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.cherry93479.aquaHomeUi"
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +58,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "This app needs access to location when open and in the background."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
