@@ -16,6 +16,7 @@ import { CreditCard, MapPin, User, Phone, Navigation, Check } from 'lucide-react
 import { razorpayService } from '@/services/razorpay';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/api/api';
 
 interface ShippingInfo {
   fullName: string;
@@ -34,11 +35,11 @@ interface CheckoutItem {
   quantity: number;
 }
 
-export default function CheckoutScreen() {
+function CheckoutScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const { directCheckout, checkoutData, locationData } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth(); // Make sure to get accessToken from auth context
 
   console.log('user checkout is', user);
   
@@ -59,6 +60,12 @@ export default function CheckoutScreen() {
   // Check if user already has location coordinates
   React.useEffect(() => {
     if (user?.latitude && user?.longitude && user?.address) {
+      setShippingInfo(prev => ({
+        ...prev,
+        address: user.address,
+        latitude: user.latitude,
+        longitude: user.longitude,
+      }));
       setLocationSelected(true);
     }
   }, [user]);
@@ -132,6 +139,7 @@ export default function CheckoutScreen() {
       return false;
     }
 
+    console.log('address is ',locationSelected, ' - ',shippingInfo.latitude , ' - ',shippingInfo.latitude)
     if (!locationSelected || !shippingInfo.latitude || !shippingInfo.longitude) {
       Alert.alert('Error', 'Please select your delivery address from the map to ensure accurate delivery');
       return false;
@@ -184,6 +192,7 @@ export default function CheckoutScreen() {
       );
       const data = await response.json();
 
+      console.log('data in reverse geocode ',data)
       if (data.results && data.results.length > 0) {
         const address = data.results[0].formatted_address;
         console.log('Reverse geocoded address:', address);
@@ -216,92 +225,127 @@ export default function CheckoutScreen() {
     });
   };
 
+  // NEW PAYMENT HANDLER USING BACKEND API
   const handlePayment = async () => {
     if (!validateForm()) return;
 
-    // Log the shipping info with coordinates before payment
-    console.log('Shipping info with coordinates:', shippingInfo);
+    console.log('Starting payment process with shipping info:', shippingInfo);
 
     setLoading(true);
     try {
-      const totalAmount = total;
-      const deliveryFee = total > 500 ? 0 : 50;
-      const finalTotal = totalAmount + deliveryFee;
+      // Initialize order service
+      const orderService = new OrderService(accessToken);
 
-      // Prepare order data with location coordinates
-      const orderData = {
-        items,
-        shippingInfo: {
-          fullName: shippingInfo.fullName,
-          phone: `+91${shippingInfo.phone}`,
-          address: shippingInfo.address,
-          latitude: shippingInfo.latitude,
-          longitude: shippingInfo.longitude,
-        },
-        totalAmount,
-        deliveryFee,
-        finalTotal,
-        userId: user?.id,
+      // Extract product information from your items
+      const product = items[0]; // Assuming single product checkout for now
+      const productId = product.id;
+      const orderType = product.type === 'subscription' ? 'rental' : 'purchase';
+
+      // Prepare user details from shipping form
+      const userDetails = {
+        name: shippingInfo.fullName,
+        email: user?.email,
+        address: shippingInfo.address,
+        phone: shippingInfo.phone, // Don't remove +91 here, backend expects clean number
+        latitude: shippingInfo.latitude,
+        longitude: shippingInfo.longitude,
       };
 
-      console.log('Order data being sent:', orderData);
+      // Step 1: Create order on backend
+      console.log('Creating order...');
+      const createOrderPayload = {
+        productId: productId,
+        type: orderType,
+        userDetails: userDetails,
+      };
 
-      // Create order with shipping info including coordinates
-      const order = await razorpayService.createOrder(finalTotal, orderData);
+      const response = await apiService.post(`orders`,createOrderPayload);
+      if(!response.success){
+        Alert.alert('Unable to do paymnet')
+      }
+      const createdOrder = response.data;
+      const orderId = createdOrder.id;
+    
+      const responseOne  = await apiService.post(`/orders/${orderId}/payment`);
+      if(!responseOne.success){
+        alert('unable to proceed')
+        return
+      }
+      const {paymentInfo} = responseOne.data;
 
-      // Prepare Razorpay options
-      const options = {
+
+      // Step 3: Open Razorpay checkout with backend data
+      const razorpayOptions = {
         description: 'AquaHome Purchase',
         image: 'https://your-logo-url.com/logo.png',
-        currency: 'INR',
-        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_your_key_here',
-        amount: finalTotal * 100,
+        currency: paymentInfo.currency,
+        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
+        amount: paymentInfo.amount, // Already in paise from backend
         name: 'AquaHome',
-        order_id: order.order_id,
+        order_id: paymentInfo.razorpayOrderId,
         prefill: {
-          email: user?.email || 'customer@example.com',
-          contact: `+91${shippingInfo.phone}`,
-          name: shippingInfo.fullName,
+          email: paymentInfo.customerEmail || user?.email || 'customer@example.com',
+          contact: paymentInfo.customerPhone,
+          name: paymentInfo.customerName,
         },
         theme: {
           color: '#4fa3c4',
         },
         notes: {
-          address: shippingInfo.address,
-          latitude: shippingInfo.latitude?.toString() || '',
-          longitude: shippingInfo.longitude?.toString() || '',
+          orderId: orderId,
+          productId: productId,
+          orderType: orderType,
         },
       };
 
-      // Open Razorpay checkout
-      const paymentResult = await razorpayService.openCheckout(options);
+      // Step 4: Process Razorpay payment
+      console.log('Opening Razorpay checkout...');
+      const paymentResult = await razorpayService.openCheckout(razorpayOptions);
 
-      // Verify payment
+      // Step 5: Verify payment if successful
       if (paymentResult.razorpay_payment_id) {
-        const isVerified = await razorpayService.verifyPayment(
-          paymentResult.razorpay_payment_id,
-          paymentResult.razorpay_order_id || '',
-          paymentResult.razorpay_signature || '',
-          orderData // Pass order data for backend processing
-        );
+        console.log('Payment completed, verifying...');
+        
+        const verifyPaymentData = {
+          razorpayPaymentId: paymentResult.razorpay_payment_id,
+          razorpayOrderId: paymentResult.razorpay_order_id,
+          razorpaySignature: paymentResult.razorpay_signature,
+        };
+
+        const { success: isVerified } = await orderService.verifyPayment(orderId, verifyPaymentData);
 
         if (isVerified) {
+          console.log('Payment verified successfully');
+          
+          // Navigate to success screen
           router.replace({
             pathname: '/order-confirmation',
             params: {
+              orderId: orderId,
               paymentId: paymentResult.razorpay_payment_id,
-              orderId: paymentResult.razorpay_order_id,
-              amount: finalTotal.toString(),
-              shippingInfo: JSON.stringify(orderData.shippingInfo),
+              amount: (paymentInfo.amount / 100).toString(),
+              productName: paymentInfo.productName,
+              orderType: orderType,
+              shippingInfo: JSON.stringify({
+                fullName: shippingInfo.fullName,
+                phone: `+91${shippingInfo.phone}`,
+                address: shippingInfo.address,
+              }),
             },
           });
         } else {
           Alert.alert('Error', 'Payment verification failed. Please contact support.');
         }
+      } else {
+        Alert.alert('Payment Cancelled', 'Payment was cancelled or failed.');
       }
+
     } catch (error) {
-      console.error('Payment error:', error);
-      Alert.alert('Payment Failed', 'There was an error processing your payment. Please try again.');
+      console.error('Payment process error:', error);
+      Alert.alert(
+        'Payment Failed', 
+        error.message || 'There was an error processing your payment. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -309,6 +353,19 @@ export default function CheckoutScreen() {
 
   const deliveryFee = total > 500 ? 0 : 50;
   const finalTotal = total + deliveryFee;
+
+  // Check if form is valid and location is selected
+  const isFormValid = () => {
+
+    return (
+      shippingInfo.fullName.trim() &&
+      /^[6-9]\d{9}$/.test(shippingInfo.phone) &&
+      shippingInfo.address.trim() &&
+      locationSelected &&
+      shippingInfo.latitude &&
+      shippingInfo.longitude
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
@@ -711,19 +768,19 @@ export default function CheckoutScreen() {
         }}>
           <TouchableOpacity
             onPress={handlePayment}
-            disabled={loading || !locationSelected}
+            disabled={loading }
             style={{
               height: 48,
               borderRadius: 12,
-              backgroundColor: loading || !locationSelected ? '#e1e5e7' : '#4fa3c4',
+              backgroundColor: loading  ? '#e1e5e7' : '#4fa3c4',
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
               shadowColor: '#4fa3c4',
               shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: loading || !locationSelected ? 0 : 0.3,
+              shadowOpacity: loading || !isFormValid() ? 0 : 0.3,
               shadowRadius: 8,
-              elevation: loading || !locationSelected ? 0 : 8,
+              elevation: loading || !isFormValid() ? 0 : 8,
             }}
           >
             {loading ? (
@@ -747,7 +804,7 @@ export default function CheckoutScreen() {
                   color: 'white',
                   marginLeft: 8,
                 }}>
-                  {locationSelected ? `Pay ₹${finalTotal.toLocaleString()}` : 'Select Location First'}
+                  {isFormValid() ? `Pay ₹${finalTotal.toLocaleString()}` : 'Complete Form First'}
                 </Text>
               </>
             )}
@@ -767,3 +824,6 @@ export default function CheckoutScreen() {
     </SafeAreaView>
   );
 }
+
+// Export the component and helper functions
+export default CheckoutScreen;
