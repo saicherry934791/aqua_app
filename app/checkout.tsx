@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  StyleSheet,
 } from 'react-native';
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
 import { CreditCard, MapPin, User, Phone, Navigation, Check } from 'lucide-react-native';
@@ -39,7 +40,7 @@ function CheckoutScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const { directCheckout, checkoutData, locationData } = useLocalSearchParams();
-  const { user, accessToken } = useAuth(); // Make sure to get accessToken from auth context
+  const { user } = useAuth();
 
   console.log('user checkout is', user);
   
@@ -109,7 +110,7 @@ function CheckoutScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ fontSize: 20, fontFamily: 'SpaceGrotesk_700Bold', color: '#121516' }}>
+        <Text style={styles.headerTitle}>
           CHECKOUT
         </Text>
       ),
@@ -139,7 +140,6 @@ function CheckoutScreen() {
       return false;
     }
 
-    console.log('address is ',locationSelected, ' - ',shippingInfo.latitude , ' - ',shippingInfo.latitude)
     if (!locationSelected || !shippingInfo.latitude || !shippingInfo.longitude) {
       Alert.alert('Error', 'Please select your delivery address from the map to ensure accurate delivery');
       return false;
@@ -157,15 +157,14 @@ function CheckoutScreen() {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
               const { latitude, longitude } = position.coords;
-              console.log('Current location:', { latitude, longitude });
               await reverseGeocode(latitude, longitude);
               setLocationLoading(false);
-              Alert.alert('Success', 'Current location detected!');
+              Alert.alert('Success', 'Current location detected and address updated!');
             },
             (error) => {
               console.error('Geolocation error:', error);
               setLocationLoading(false);
-              Alert.alert('Location Error', 'Failed to get current location. Please use map picker instead.');
+              Alert.alert('Error', 'Failed to get current location. Please use map picker instead.');
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
           );
@@ -174,7 +173,6 @@ function CheckoutScreen() {
           Alert.alert('Error', 'Geolocation is not supported by this browser. Please use map picker.');
         }
       } else {
-        // For React Native, you would use expo-location or react-native-geolocation-service
         Alert.alert('Info', 'Please use the map picker to select your location.');
         setLocationLoading(false);
       }
@@ -192,11 +190,8 @@ function CheckoutScreen() {
       );
       const data = await response.json();
 
-      console.log('data in reverse geocode ',data)
       if (data.results && data.results.length > 0) {
         const address = data.results[0].formatted_address;
-        console.log('Reverse geocoded address:', address);
-        
         setShippingInfo(prev => ({
           ...prev,
           address,
@@ -220,12 +215,11 @@ function CheckoutScreen() {
         returnTo: '/checkout',
         currentLatitude: shippingInfo.latitude?.toString() || '',
         currentLongitude: shippingInfo.longitude?.toString() || '',
-        currentAddress: '',
+        currentAddress: shippingInfo.address || '',
       },
     });
   };
 
-  // NEW PAYMENT HANDLER USING BACKEND API
   const handlePayment = async () => {
     if (!validateForm()) return;
 
@@ -233,118 +227,38 @@ function CheckoutScreen() {
 
     setLoading(true);
     try {
-      // Initialize order service
-      const orderService = new OrderService(accessToken);
-
-      // Extract product information from your items
-      const product = items[0]; // Assuming single product checkout for now
-      const productId = product.id;
-      const orderType = product.type === 'subscription' ? 'rental' : 'purchase';
-
-      // Prepare user details from shipping form
-      const userDetails = {
-        name: shippingInfo.fullName,
-        email: user?.email,
-        address: shippingInfo.address,
-        phone: shippingInfo.phone, // Don't remove +91 here, backend expects clean number
-        latitude: shippingInfo.latitude,
-        longitude: shippingInfo.longitude,
-      };
-
-      // Step 1: Create order on backend
-      console.log('Creating order...');
-      const createOrderPayload = {
-        productId: productId,
-        type: orderType,
-        userDetails: userDetails,
-      };
-
-      const response = await apiService.post(`orders`,createOrderPayload);
-      if(!response.success){
-        Alert.alert('Unable to do paymnet')
-      }
-      const createdOrder = response.data;
-      const orderId = createdOrder.id;
-    
-      const responseOne  = await apiService.post(`/orders/${orderId}/payment`);
-      if(!responseOne.success){
-        alert('unable to proceed')
-        return
-      }
-      const {paymentInfo} = responseOne.data;
-
-
-      // Step 3: Open Razorpay checkout with backend data
-      const razorpayOptions = {
-        description: 'AquaHome Purchase',
-        image: 'https://your-logo-url.com/logo.png',
-        currency: paymentInfo.currency,
-        key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID,
-        amount: paymentInfo.amount, // Already in paise from backend
-        name: 'AquaHome',
-        order_id: paymentInfo.razorpayOrderId,
-        prefill: {
-          email: paymentInfo.customerEmail || user?.email || 'customer@example.com',
-          contact: paymentInfo.customerPhone,
-          name: paymentInfo.customerName,
-        },
-        theme: {
-          color: '#4fa3c4',
-        },
-        notes: {
-          orderId: orderId,
-          productId: productId,
-          orderType: orderType,
-        },
-      };
-
-      // Step 4: Process Razorpay payment
-      console.log('Opening Razorpay checkout...');
-      const paymentResult = await razorpayService.openCheckout(razorpayOptions);
-
-      // Step 5: Verify payment if successful
-      if (paymentResult.razorpay_payment_id) {
-        console.log('Payment completed, verifying...');
-        
-        const verifyPaymentData = {
-          razorpayPaymentId: paymentResult.razorpay_payment_id,
-          razorpayOrderId: paymentResult.razorpay_order_id,
-          razorpaySignature: paymentResult.razorpay_signature,
-        };
-
-        const { success: isVerified } = await orderService.verifyPayment(orderId, verifyPaymentData);
-
-        if (isVerified) {
-          console.log('Payment verified successfully');
-          
-          // Navigate to success screen
-          router.replace({
-            pathname: '/order-confirmation',
-            params: {
-              orderId: orderId,
-              paymentId: paymentResult.razorpay_payment_id,
-              amount: (paymentInfo.amount / 100).toString(),
-              productName: paymentInfo.productName,
-              orderType: orderType,
-              shippingInfo: JSON.stringify({
-                fullName: shippingInfo.fullName,
-                phone: `+91${shippingInfo.phone}`,
-                address: shippingInfo.address,
-              }),
+      // Mock payment process for now
+      Alert.alert(
+        'Payment Successful',
+        'Your order has been placed successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.replace({
+                pathname: '/order-confirmation',
+                params: {
+                  orderId: Date.now().toString(),
+                  paymentId: 'mock_payment_' + Date.now(),
+                  amount: total.toString(),
+                  productName: items[0]?.name || 'Product',
+                  orderType: items[0]?.type || 'product',
+                  shippingInfo: JSON.stringify({
+                    fullName: shippingInfo.fullName,
+                    phone: `+91${shippingInfo.phone}`,
+                    address: shippingInfo.address,
+                  }),
+                },
+              });
             },
-          });
-        } else {
-          Alert.alert('Error', 'Payment verification failed. Please contact support.');
-        }
-      } else {
-        Alert.alert('Payment Cancelled', 'Payment was cancelled or failed.');
-      }
-
+          },
+        ]
+      );
     } catch (error) {
       console.error('Payment process error:', error);
       Alert.alert(
         'Payment Failed', 
-        error.message || 'There was an error processing your payment. Please try again.'
+        'There was an error processing your payment. Please try again.'
       );
     } finally {
       setLoading(false);
@@ -354,9 +268,7 @@ function CheckoutScreen() {
   const deliveryFee = total > 500 ? 0 : 50;
   const finalTotal = total + deliveryFee;
 
-  // Check if form is valid and location is selected
   const isFormValid = () => {
-
     return (
       shippingInfo.fullName.trim() &&
       /^[6-9]\d{9}$/.test(shippingInfo.phone) &&
@@ -368,134 +280,63 @@ function CheckoutScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+    <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <ScrollView
-          style={{ flex: 1 }}
+          style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120 }}
+          contentContainerStyle={styles.scrollContent}
         >
           {/* Order Summary Card */}
-          <View style={{
-            margin: 16,
-            backgroundColor: '#f8f9fa',
-            borderRadius: 16,
-            padding: 20,
-          }}>
-            <Text style={{
-              fontSize: 20,
-              fontFamily: 'SpaceGrotesk_700Bold',
-              color: '#121516',
-              marginBottom: 16,
-            }}>
+          <View style={styles.orderSummaryCard}>
+            <Text style={styles.orderSummaryTitle}>
               Order Summary
             </Text>
 
             {items.map((item) => (
-              <View key={item.id} style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                paddingVertical: 8,
-              }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{
-                    fontSize: 16,
-                    fontFamily: 'SpaceGrotesk_600SemiBold',
-                    color: '#121516',
-                  }}>
+              <View key={item.id} style={styles.orderItem}>
+                <View style={styles.orderItemDetails}>
+                  <Text style={styles.orderItemName}>
                     {item.name}
                   </Text>
-                  <Text style={{
-                    fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_400Regular',
-                    color: '#687b82',
-                    marginTop: 2,
-                  }}>
+                  <Text style={styles.orderItemType}>
                     {item.type === 'subscription' ? 'Monthly Rental' : 'One-time Purchase'} • Qty: {item.quantity}
                   </Text>
                 </View>
-                <Text style={{
-                  fontSize: 18,
-                  fontFamily: 'SpaceGrotesk_700Bold',
-                  color: '#121516',
-                }}>
+                <Text style={styles.orderItemPrice}>
                   ₹{(item.price * item.quantity).toLocaleString()}
                 </Text>
               </View>
             ))}
 
-            <View style={{
-              borderTopWidth: 1,
-              borderTopColor: '#e1e5e7',
-              marginTop: 16,
-              paddingTop: 16,
-            }}>
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginBottom: 8,
-              }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_400Regular',
-                  color: '#687b82',
-                }}>
+            <View style={styles.orderSummaryFooter}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>
                   Subtotal
                 </Text>
-                <Text style={{
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
-                  color: '#121516',
-                }}>
+                <Text style={styles.summaryValue}>
                   ₹{total.toLocaleString()}
                 </Text>
               </View>
 
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}>
-                <Text style={{
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_400Regular',
-                  color: '#687b82',
-                }}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>
                   Delivery Fee {total > 500 && '(Free above ₹500)'}
                 </Text>
-                <Text style={{
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
-                  color: deliveryFee === 0 ? '#4fa3c4' : '#121516',
-                }}>
+                <Text style={[styles.summaryValue, deliveryFee === 0 && styles.freeDelivery]}>
                   {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
                 </Text>
               </View>
 
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                paddingTop: 12,
-                borderTopWidth: 1,
-                borderTopColor: '#e1e5e7',
-              }}>
-                <Text style={{
-                  fontSize: 20,
-                  fontFamily: 'SpaceGrotesk_700Bold',
-                  color: '#121516',
-                }}>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>
                   Total
                 </Text>
-                <Text style={{
-                  fontSize: 20,
-                  fontFamily: 'SpaceGrotesk_700Bold',
-                  color: '#4fa3c4',
-                }}>
+                <Text style={styles.totalValue}>
                   ₹{finalTotal.toLocaleString()}
                 </Text>
               </View>
@@ -503,81 +344,36 @@ function CheckoutScreen() {
           </View>
 
           {/* Delivery Information */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
-            <Text style={{
-              fontSize: 20,
-              fontFamily: 'SpaceGrotesk_700Bold',
-              color: '#121516',
-              marginBottom: 20,
-            }}>
+          <View style={styles.deliverySection}>
+            <Text style={styles.sectionTitle}>
               Delivery Information
             </Text>
 
             {/* Full Name */}
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{
-                fontSize: 14,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                color: '#121516',
-                marginBottom: 6,
-              }}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
                 Full Name
               </Text>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#f8f9fa',
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                borderWidth: 1,
-                borderColor: '#e1e5e7',
-                height: 40,
-              }}>
+              <View style={styles.inputWrapper}>
                 <User size={16} color="#687b82" />
                 <TextInput
                   value={shippingInfo.fullName}
                   onChangeText={(text) => setShippingInfo(prev => ({ ...prev, fullName: text }))}
                   placeholder="Enter your full name"
                   placeholderTextColor="#687b82"
-                  style={{
-                    flex: 1,
-                    marginLeft: 8,
-                    fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_400Regular',
-                    color: '#121516',
-                  }}
+                  style={styles.textInput}
                 />
               </View>
             </View>
 
             {/* Phone Number */}
-            <View style={{ marginBottom: 14 }}>
-              <Text style={{
-                fontSize: 14,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                color: '#121516',
-                marginBottom: 6,
-              }}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
                 Phone Number
               </Text>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#f8f9fa',
-                borderRadius: 8,
-                paddingHorizontal: 12,
-                borderWidth: 1,
-                borderColor: '#e1e5e7',
-                height: 40,
-              }}>
+              <View style={styles.inputWrapper}>
                 <Phone size={16} color="#687b82" />
-                <Text style={{
-                  fontSize: 14,
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
-                  color: '#121516',
-                  marginLeft: 8,
-                  marginRight: 4,
-                }}>
+                <Text style={styles.countryCode}>
                   +91
                 </Text>
                 <TextInput
@@ -587,118 +383,59 @@ function CheckoutScreen() {
                   placeholderTextColor="#687b82"
                   keyboardType="numeric"
                   maxLength={10}
-                  style={{
-                    flex: 1,
-                    fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_400Regular',
-                    color: '#121516',
-                  }}
+                  style={styles.textInput}
                 />
               </View>
             </View>
 
             {/* Address - Map Selection Required */}
-            <View style={{ marginBottom: 20 }}>
-              <Text style={{
-                fontSize: 14,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
-                color: '#121516',
-                marginBottom: 6,
-              }}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
                 Delivery Address *
               </Text>
 
-              <View style={{
-                backgroundColor: '#f8f9fa',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: locationSelected ? '#4fa3c4' : '#ff6b6b',
-                overflow: 'hidden',
-              }}>
+              <View style={[styles.addressContainer, !locationSelected && styles.addressContainerError]}>
                 {/* Address Display */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'flex-start',
-                  paddingHorizontal: 12,
-                  paddingVertical: 12,
-                  minHeight: 50,
-                }}>
-                  <MapPin size={16} color="#687b82" style={{ marginTop: 2 }} />
-                  <View style={{ flex: 1, marginLeft: 8 }}>
+                <View style={styles.addressDisplay}>
+                  <MapPin size={16} color="#687b82" style={styles.addressIcon} />
+                  <View style={styles.addressTextContainer}>
                     {shippingInfo.address ? (
                       <>
-                        <Text style={{
-                          fontSize: 14,
-                          fontFamily: 'SpaceGrotesk_400Regular',
-                          color: '#121516',
-                          lineHeight: 18,
-                        }}>
+                        <Text style={styles.addressText}>
                           {shippingInfo.address}
                         </Text>
                         {shippingInfo.latitude && shippingInfo.longitude && (
-                          <Text style={{
-                            fontSize: 11,
-                            fontFamily: 'SpaceGrotesk_400Regular',
-                            color: '#687b82',
-                            marginTop: 4,
-                          }}>
+                          <Text style={styles.coordinatesText}>
                             📍 {shippingInfo.latitude.toFixed(6)}, {shippingInfo.longitude.toFixed(6)}
                           </Text>
                         )}
                       </>
                     ) : (
-                      <Text style={{
-                        fontSize: 14,
-                        fontFamily: 'SpaceGrotesk_400Regular',
-                        color: '#ff6b6b',
-                        fontStyle: 'italic',
-                      }}>
+                      <Text style={styles.addressPlaceholder}>
                         Please select your delivery address on the map
                       </Text>
                     )}
                   </View>
                   {locationSelected && (
-                    <View style={{
-                      backgroundColor: '#e8f4f8',
-                      borderRadius: 4,
-                      padding: 2,
-                      marginLeft: 6,
-                      marginTop: 1,
-                    }}>
+                    <View style={styles.locationSelectedIcon}>
                       <Check size={12} color="#4fa3c4" />
                     </View>
                   )}
                 </View>
 
                 {/* Location Action Buttons */}
-                <View style={{
-                  flexDirection: 'row',
-                  borderTopWidth: 1,
-                  borderTopColor: '#e1e5e7',
-                }}>
+                <View style={styles.locationButtons}>
                   <TouchableOpacity
                     onPress={getCurrentLocation}
                     disabled={locationLoading}
-                    style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingVertical: 10,
-                      backgroundColor: '#e8f4f8',
-                    }}
+                    style={styles.locationButton}
                   >
                     {locationLoading ? (
                       <ActivityIndicator size="small" color="#4fa3c4" />
                     ) : (
                       <>
                         <Navigation size={14} color="#4fa3c4" />
-                        <Text style={{
-                          fontSize: 12,
-                          fontFamily: 'SpaceGrotesk_600SemiBold',
-                          color: '#4fa3c4',
-                          marginLeft: 4,
-                        }}>
+                        <Text style={styles.locationButtonText}>
                           Current Location
                         </Text>
                       </>
@@ -707,24 +444,10 @@ function CheckoutScreen() {
 
                   <TouchableOpacity
                     onPress={openMapPicker}
-                    style={{
-                      flex: 1,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      paddingVertical: 10,
-                      backgroundColor: '#fff3e0',
-                      borderLeftWidth: 1,
-                      borderLeftColor: '#e1e5e7',
-                    }}
+                    style={[styles.locationButton, styles.mapPickerButton]}
                   >
                     <MapPin size={14} color="#ff9800" />
-                    <Text style={{
-                      fontSize: 12,
-                      fontFamily: 'SpaceGrotesk_600SemiBold',
-                      color: '#ff9800',
-                      marginLeft: 4,
-                    }}>
+                    <Text style={[styles.locationButtonText, styles.mapPickerButtonText]}>
                       Select on Map
                     </Text>
                   </TouchableOpacity>
@@ -732,13 +455,7 @@ function CheckoutScreen() {
               </View>
 
               {/* Helper Text */}
-              <Text style={{
-                fontSize: 11,
-                fontFamily: 'SpaceGrotesk_400Regular',
-                color: locationSelected ? '#4fa3c4' : '#ff6b6b',
-                marginTop: 6,
-                textAlign: 'center',
-              }}>
+              <Text style={[styles.helperText, locationSelected ? styles.helperTextSuccess : styles.helperTextError]}>
                 {locationSelected 
                   ? '✅ Location confirmed for accurate delivery' 
                   : '⚠️ Map selection required for precise delivery location'
@@ -749,74 +466,30 @@ function CheckoutScreen() {
         </ScrollView>
 
         {/* Fixed Payment Button */}
-        <View style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: 'white',
-          borderTopWidth: 1,
-          borderTopColor: '#f1f3f4',
-          paddingHorizontal: 16,
-          paddingVertical: 16,
-          paddingBottom: Platform.OS === 'ios' ? 34 : 16,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-          elevation: 8,
-        }}>
+        <View style={styles.paymentButtonContainer}>
           <TouchableOpacity
             onPress={handlePayment}
-            disabled={loading }
-            style={{
-              height: 48,
-              borderRadius: 12,
-              backgroundColor: loading  ? '#e1e5e7' : '#4fa3c4',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              shadowColor: '#4fa3c4',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: loading || !isFormValid() ? 0 : 0.3,
-              shadowRadius: 8,
-              elevation: loading || !isFormValid() ? 0 : 8,
-            }}
+            disabled={loading || !isFormValid()}
+            style={[styles.paymentButton, (loading || !isFormValid()) && styles.paymentButtonDisabled]}
           >
             {loading ? (
               <>
                 <ActivityIndicator color="white" size="small" />
-                <Text style={{
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_700Bold',
-                  color: 'white',
-                  marginLeft: 8,
-                }}>
+                <Text style={styles.paymentButtonText}>
                   Processing...
                 </Text>
               </>
             ) : (
               <>
                 <CreditCard size={20} color="white" />
-                <Text style={{
-                  fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_700Bold',
-                  color: 'white',
-                  marginLeft: 8,
-                }}>
+                <Text style={styles.paymentButtonText}>
                   {isFormValid() ? `Pay ₹${finalTotal.toLocaleString()}` : 'Complete Form First'}
                 </Text>
               </>
             )}
           </TouchableOpacity>
 
-          <Text style={{
-            fontSize: 10,
-            fontFamily: 'SpaceGrotesk_400Regular',
-            color: '#687b82',
-            textAlign: 'center',
-            marginTop: 4,
-          }}>
+          <Text style={styles.securePaymentText}>
             🔒 Secure payment powered by Razorpay
           </Text>
         </View>
@@ -825,5 +498,282 @@ function CheckoutScreen() {
   );
 }
 
-// Export the component and helper functions
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+  },
+  orderSummaryCard: {
+    margin: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
+    padding: 20,
+  },
+  orderSummaryTitle: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+    marginBottom: 16,
+  },
+  orderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  orderItemDetails: {
+    flex: 1,
+  },
+  orderItemName: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#121516',
+  },
+  orderItemType: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+    marginTop: 2,
+  },
+  orderItemPrice: {
+    fontSize: 18,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+  },
+  orderSummaryFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5e7',
+    marginTop: 16,
+    paddingTop: 16,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#121516',
+  },
+  freeDelivery: {
+    color: '#4fa3c4',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5e7',
+  },
+  totalLabel: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+  },
+  totalValue: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#4fa3c4',
+  },
+  deliverySection: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: '#121516',
+    marginBottom: 20,
+  },
+  inputContainer: {
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#121516',
+    marginBottom: 6,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#e1e5e7',
+    height: 40,
+  },
+  textInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#121516',
+  },
+  countryCode: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#121516',
+    marginLeft: 8,
+    marginRight: 4,
+  },
+  addressContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#4fa3c4',
+    overflow: 'hidden',
+  },
+  addressContainerError: {
+    borderColor: '#ff6b6b',
+  },
+  addressDisplay: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    minHeight: 50,
+  },
+  addressIcon: {
+    marginTop: 2,
+  },
+  addressTextContainer: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  addressText: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#121516',
+    lineHeight: 18,
+  },
+  coordinatesText: {
+    fontSize: 11,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+    marginTop: 4,
+  },
+  addressPlaceholder: {
+    fontSize: 14,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#ff6b6b',
+    fontStyle: 'italic',
+  },
+  locationSelectedIcon: {
+    backgroundColor: '#e8f4f8',
+    borderRadius: 4,
+    padding: 2,
+    marginLeft: 6,
+    marginTop: 1,
+  },
+  locationButtons: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: '#e1e5e7',
+  },
+  locationButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#e8f4f8',
+  },
+  mapPickerButton: {
+    backgroundColor: '#fff3e0',
+    borderLeftWidth: 1,
+    borderLeftColor: '#e1e5e7',
+  },
+  locationButtonText: {
+    fontSize: 12,
+    fontFamily: 'SpaceGrotesk_600SemiBold',
+    color: '#4fa3c4',
+    marginLeft: 4,
+  },
+  mapPickerButtonText: {
+    color: '#ff9800',
+  },
+  helperText: {
+    fontSize: 11,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  helperTextSuccess: {
+    color: '#4fa3c4',
+  },
+  helperTextError: {
+    color: '#ff6b6b',
+  },
+  paymentButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f3f4',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  paymentButton: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#4fa3c4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#4fa3c4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  paymentButtonDisabled: {
+    backgroundColor: '#e1e5e7',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  paymentButtonText: {
+    fontSize: 16,
+    fontFamily: 'SpaceGrotesk_700Bold',
+    color: 'white',
+    marginLeft: 8,
+  },
+  securePaymentText: {
+    fontSize: 10,
+    fontFamily: 'SpaceGrotesk_400Regular',
+    color: '#687b82',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+});
+
 export default CheckoutScreen;
