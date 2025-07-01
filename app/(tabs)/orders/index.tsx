@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,7 +8,7 @@ import {
     RefreshControl,
     ActivityIndicator,
 } from 'react-native';
-import { useNavigation, useRouter } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { apiService } from '@/api/api';
 
 interface OrderItem {
@@ -33,7 +33,6 @@ interface Order {
 
 export default function OrdersScreen() {
     const navigation = useNavigation();
-    const router = useRouter();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -67,40 +66,12 @@ export default function OrdersScreen() {
         fetchOrders();
     }, []);
 
-    const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'delivered':
-                return '#4ade80';
-            case 'shipped':
-                return '#3b82f6';
-            case 'processing':
-                return '#f59e0b';
-            case 'cancelled':
-                return '#ef4444';
-            default:
-                return '#6b7280';
-        }
-    };
-
     if (loading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+            <View className="flex-1 justify-center items-center bg-white">
                 <ActivityIndicator size="large" color="#4fa3c4" />
-                <Text style={{ 
-                    marginTop: 16, 
-                    fontSize: 16, 
-                    fontFamily: 'SpaceGrotesk_500Medium',
-                    color: '#687b82' 
-                }}>
-                    Loading your orders...
+                <Text className="mt-4 text-base font-grotesk-medium text-[#687b82]">
+                    Loading orders...
                 </Text>
             </View>
         );
@@ -108,32 +79,15 @@ export default function OrdersScreen() {
 
     if (error) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', padding: 20 }}>
-                <Text style={{ 
-                    fontSize: 18, 
-                    fontFamily: 'SpaceGrotesk_600SemiBold',
-                    color: '#ef4444',
-                    textAlign: 'center',
-                    marginBottom: 16
-                }}>
+            <View className="flex-1 justify-center items-center bg-white px-4">
+                <Text className="text-lg font-grotesk-bold text-red-500 text-center mb-4">
                     {error}
                 </Text>
                 <TouchableOpacity
                     onPress={fetchOrders}
-                    style={{
-                        backgroundColor: '#4fa3c4',
-                        paddingHorizontal: 24,
-                        paddingVertical: 12,
-                        borderRadius: 8,
-                    }}
+                    className="bg-[#4fa3c4] px-6 py-3 rounded-lg"
                 >
-                    <Text style={{ 
-                        color: 'white', 
-                        fontFamily: 'SpaceGrotesk_600SemiBold',
-                        fontSize: 16
-                    }}>
-                        Try Again
-                    </Text>
+                    <Text className="text-white font-grotesk-bold">Try Again</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -141,166 +95,60 @@ export default function OrdersScreen() {
 
     return (
         <ScrollView 
-            style={{ flex: 1, backgroundColor: 'white' }}
+            className="flex-1 bg-white"
             refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
         >
+            {/* Past Orders Section */}
+            <Text className="text-primary text-2xl font-grotesk-bold px-4 pb-2 pt-4">
+                Past Orders
+            </Text>
+
+            {/* Orders List */}
             {orders.length === 0 ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, minHeight: 400 }}>
-                    <Text style={{ 
-                        fontSize: 24, 
-                        fontFamily: 'SpaceGrotesk_700Bold',
-                        color: '#121516',
-                        textAlign: 'center',
-                        marginBottom: 8
-                    }}>
+                <View className="flex-1 justify-center items-center py-20">
+                    <Text className="text-xl font-grotesk-bold text-primary mb-2">
                         No Orders Yet
                     </Text>
-                    <Text style={{ 
-                        fontSize: 16, 
-                        fontFamily: 'SpaceGrotesk_400Regular',
-                        color: '#687b82',
-                        textAlign: 'center',
-                        marginBottom: 24
-                    }}>
-                        Start shopping to see your orders here
+                    <Text className="text-base font-grotesk text-secondary text-center">
+                        Your completed orders will appear here
                     </Text>
-                    <TouchableOpacity
-                        onPress={() => router.push('/(tabs)/products')}
-                        style={{
-                            backgroundColor: '#4fa3c4',
-                            paddingHorizontal: 24,
-                            paddingVertical: 12,
-                            borderRadius: 24,
-                        }}
-                    >
-                        <Text style={{ 
-                            color: 'white', 
-                            fontFamily: 'SpaceGrotesk_600SemiBold',
-                            fontSize: 16
-                        }}>
-                            Browse Products
-                        </Text>
-                    </TouchableOpacity>
                 </View>
             ) : (
-                <>
-                    <Text style={{ 
-                        fontSize: 24, 
-                        fontFamily: 'SpaceGrotesk_700Bold',
-                        color: '#121516',
-                        paddingHorizontal: 16,
-                        paddingBottom: 8,
-                        paddingTop: 16
-                    }}>
-                        Your Orders ({orders.length})
-                    </Text>
-
-                    {orders.map((order) => (
-                        <TouchableOpacity
-                            key={order.id}
-                            onPress={() => router.push(`/orders/${order.id}`)}
-                            style={{
-                                backgroundColor: 'white',
-                                marginHorizontal: 16,
-                                marginVertical: 8,
-                                borderRadius: 12,
-                                padding: 16,
-                                borderWidth: 1,
-                                borderColor: '#f1f3f4',
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.1,
-                                shadowRadius: 4,
-                                elevation: 3,
-                            }}
-                        >
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ 
-                                        fontSize: 18, 
-                                        fontFamily: 'SpaceGrotesk_700Bold',
-                                        color: '#121516',
-                                        marginBottom: 4
-                                    }}>
-                                        Order #{order.orderNumber}
-                                    </Text>
-                                    <Text style={{ 
-                                        fontSize: 14, 
-                                        fontFamily: 'SpaceGrotesk_400Regular',
-                                        color: '#687b82'
-                                    }}>
-                                        {formatDate(order.createdAt)}
-                                    </Text>
-                                </View>
-                                <View style={{
-                                    backgroundColor: getStatusColor(order.status),
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 4,
-                                    borderRadius: 12,
-                                }}>
-                                    <Text style={{ 
-                                        fontSize: 12, 
-                                        fontFamily: 'SpaceGrotesk_600SemiBold',
-                                        color: 'white',
-                                        textTransform: 'capitalize'
-                                    }}>
-                                        {order.status}
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {order.items && order.items.length > 0 && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                                    {order.items[0].image && (
-                                        <Image
-                                            source={{ uri: order.items[0].image }}
-                                            style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }}
-                                            resizeMode="cover"
-                                        />
-                                    )}
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={{ 
-                                            fontSize: 16, 
-                                            fontFamily: 'SpaceGrotesk_600SemiBold',
-                                            color: '#121516',
-                                            marginBottom: 2
-                                        }}>
-                                            {order.items[0].name}
-                                        </Text>
-                                        {order.items.length > 1 && (
-                                            <Text style={{ 
-                                                fontSize: 14, 
-                                                fontFamily: 'SpaceGrotesk_400Regular',
-                                                color: '#687b82'
-                                            }}>
-                                                +{order.items.length - 1} more item{order.items.length > 2 ? 's' : ''}
-                                            </Text>
-                                        )}
-                                    </View>
-                                </View>
+                orders.map((order) => (
+                    <TouchableOpacity
+                        key={order.id}
+                        onPress={() => navigation.navigate('orders/[id]', { id: order.id })}
+                        className="flex-row gap-4 bg-white px-4 py-3 justify-between"
+                    >
+                        <View className="flex-row items-start gap-4 flex-1">
+                            {order.items && order.items.length > 0 && order.items[0].image && (
+                                <Image
+                                    source={{ uri: order.items[0].image }}
+                                    className="w-[80px] h-[80px] rounded-lg"
+                                    resizeMode="cover"
+                                />
                             )}
-
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text style={{ 
-                                    fontSize: 20, 
-                                    fontFamily: 'SpaceGrotesk_700Bold',
-                                    color: '#4fa3c4'
-                                }}>
-                                    ₹{order?.total?.toLocaleString()}
+                            <View className="flex-1 flex-col justify-center">
+                                <Text className="text-xl text-primary font-grotesk-bold">
+                                    {order.items && order.items.length > 0 ? order.items[0].name : 'Order'}
                                 </Text>
-                                <Text style={{ 
-                                    fontSize: 14, 
-                                    fontFamily: 'SpaceGrotesk_500Medium',
-                                    color: '#4fa3c4'
-                                }}>
-                                    View Details →
+                                <Text className="text-secondary text-lg font-grotesk">
+                                    Status: {order.status}
+                                </Text>
+                                <Text className="text-secondary text-lg font-grotesk">
+                                    Order #{order.orderNumber}
                                 </Text>
                             </View>
-                        </TouchableOpacity>
-                    ))}
-                </>
+                        </View>
+                        <View className="justify-center">
+                            <Text className="text-primary text-xl font-grotesk-medium">
+                                ₹{order.total?.toLocaleString()}
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                ))
             )}
         </ScrollView>
     );

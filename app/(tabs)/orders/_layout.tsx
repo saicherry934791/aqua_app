@@ -34,7 +34,6 @@ const _layout = () => {
     return (
         <Tab.Navigator
             screenOptions={{
-                swipeEnabled: false,
                 tabBarScrollEnabled: true,
                 tabBarActiveTintColor: '#121517', // active tab text color
                 tabBarInactiveTintColor: '#121517', // inactive tab text color
@@ -55,7 +54,7 @@ const _layout = () => {
                     elevation: 0,
                 },
                 tabBarItemStyle: {
-                    width: 'auto',           // ✅ Don’t force equal width
+                    width: 'auto',           // ✅ Don't force equal width
                 },
             }}
         >
