@@ -10,7 +10,7 @@ import {
 import React, { useLayoutEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, CustomerType } from '@/contexts/AuthContext';
 
 const Login = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -39,16 +39,14 @@ const Login = () => {
         if (isValidPhoneNumber(phoneNumber)) {
             setLoading(true);
             try {
-                const result = await sendOTP(phoneNumber);
-                if (result.success) {
+                const result = await sendOTP(phoneNumber, CustomerType.CUSTOMER);
+                if (result) {
                     Alert.alert('Success', `OTP sent to +91 ${phoneNumber}`, [
                         { text: 'OK', onPress: () => router.push({ pathname: '/(auth)/otp', params: { phone: phoneNumber } }) }
                     ]);
-                } else {
-                    Alert.alert('Error', result.error || 'Failed to send OTP');
                 }
-            } catch (error) {
-                Alert.alert('Error', 'Something went wrong. Please try again.');
+            } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to send OTP');
             } finally {
                 setLoading(false);
             }

@@ -9,14 +9,14 @@ import {
 } from 'react-native';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, CustomerType } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const OTPScreen = () => {
     const navigation = useNavigation();
     const router = useRouter();
     const { phone } = useLocalSearchParams();
-    const { loginWithOTP, sendOTP } = useAuth();
+    const { verifyOTP, sendOTP } = useAuth();
     
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [isComplete, setIsComplete] = useState(false);
@@ -100,22 +100,17 @@ const OTPScreen = () => {
         if (isComplete && phone) {
             setLoading(true);
             try {
-                const result = await loginWithOTP(phone as string, otpString);
-                if (result.success) {
+                const result = await verifyOTP(otpString, CustomerType.CUSTOMER);
+                if (result) {
                     console.log('OTP verification successful, navigating...');
                     // Small delay to ensure state is updated
                     setTimeout(() => {
                         // Don't navigate manually - let the index screen handle it based on auth state
                         router.replace('/');
                     }, 100);
-                } else {
-                    Alert.alert('Error', result.error || 'Invalid OTP. Please try again.');
-                    // Clear OTP on error
-                    setOtp(['', '', '', '', '', '']);
-                    inputRefs.current[0]?.focus();
                 }
-            } catch (error) {
-                Alert.alert('Error', 'Something went wrong. Please try again.');
+            } catch (error: any) {
+                Alert.alert('Error', error.message || 'Invalid OTP. Please try again.');
                 // Clear OTP on error
                 setOtp(['', '', '', '', '', '']);
                 inputRefs.current[0]?.focus();
@@ -129,17 +124,15 @@ const OTPScreen = () => {
         if (phone) {
             setResendLoading(true);
             try {
-                const result = await sendOTP(phone as string);
-                if (result.success) {
+                const result = await sendOTP(phone as string, CustomerType.CUSTOMER);
+                if (result) {
                     Alert.alert('Success', 'A new OTP has been sent to your phone number.');
                     // Clear current OTP
                     setOtp(['', '', '', '', '', '']);
                     inputRefs.current[0]?.focus();
-                } else {
-                    Alert.alert('Error', result.error || 'Failed to resend OTP');
                 }
-            } catch (error) {
-                Alert.alert('Error', 'Something went wrong. Please try again.');
+            } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to resend OTP');
             } finally {
                 setResendLoading(false);
             }
