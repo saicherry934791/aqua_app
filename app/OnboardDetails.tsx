@@ -1,25 +1,24 @@
-import React, { useState, useLayoutEffect, useCallback, useRef, useEffect } from 'react';
+import { apiService } from '@/api/api';
+import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
+import { useAuth } from '@/contexts/AuthContext';
+import * as Location from 'expo-location';
+import { useNavigation, useRouter } from 'expo-router';
+import { Check, Mail, MapPin, Navigation, Phone, User } from 'lucide-react-native';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  Alert,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-  Dimensions,
-  FlatList,
-  Keyboard,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRouter } from 'expo-router';
-import { MapPin, User, Phone, Mail, Navigation, Check, Search } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
-import * as Location from 'expo-location';
-import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
-import { apiService } from '@/api/api';
 
 // Conditional import for maps - only import on native platforms
 let MapView: any = null;
@@ -151,7 +150,7 @@ export default function OnboardDetailsScreen() {
         setShowSearchResults(true);
       }
     } catch (error) {
-      console.error('Error searching places:', error);
+      console.log('Error searching places:', error);
     } finally {
       setIsSearching(false);
     }
@@ -229,7 +228,7 @@ export default function OnboardDetailsScreen() {
 
       return true;
     } catch (error) {
-      console.error('Error requesting location permission:', error);
+      console.log('Error requesting location permission:', error);
       Alert.alert('Error', 'Failed to request location permission');
       return false;
     }
@@ -290,7 +289,7 @@ export default function OnboardDetailsScreen() {
               Alert.alert('Success', 'Current location detected and address updated!');
             },
             (error) => {
-              console.error('Geolocation error:', error);
+              console.log('Geolocation error:', error);
               setLocationLoading(false);
               Alert.alert('Error', 'Failed to get current location. Please enter your address manually or try the map picker.');
             },
@@ -319,7 +318,7 @@ export default function OnboardDetailsScreen() {
       await handleLocationUpdate(latitude, longitude);
       Alert.alert('Success', 'Location detected successfully!');
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.log('Error getting location:', error);
       Alert.alert('Error', 'Failed to get current location. Please enter your address manually.');
     } finally {
       setLocationLoading(false);
@@ -434,7 +433,7 @@ export default function OnboardDetailsScreen() {
         }
       }
     } catch (error) {
-      console.error('Error reverse geocoding:', error);
+      console.log('Error reverse geocoding:', error);
       // Still update with coordinates even if reverse geocoding fails
       const genericAddress = `Selected Location, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
       setUserDetails(prev => ({
@@ -500,7 +499,7 @@ export default function OnboardDetailsScreen() {
         }
       }
     } catch (error) {
-      console.error('Error selecting search result:', error);
+      console.log('Error selecting search result:', error);
     }
   };
 

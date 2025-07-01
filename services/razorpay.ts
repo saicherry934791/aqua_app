@@ -52,7 +52,7 @@ class RazorpayService {
 
       return await response.json();
     } catch (error) {
-      console.error('Error creating order:', error);
+      console.log('Error creating order:', error);
       throw error;
     }
   }
@@ -131,7 +131,7 @@ class RazorpayService {
       const result = await response.json();
       return result.verified;
     } catch (error) {
-      console.error('Error verifying payment:', error);
+      console.log('Error verifying payment:', error);
       return false;
     }
   }

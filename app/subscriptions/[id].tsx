@@ -46,7 +46,7 @@ const SubscriptionDetails = () => {
                 setIsCancelSheetOpening(false);
             }, 100);
         } catch (error) {
-            console.error('Error opening cancel sheet:', error);
+            console.log('Error opening cancel sheet:', error);
             setIsCancelSheetOpening(false);
         }
     }, [isCancelSheetOpening]);
@@ -68,7 +68,7 @@ const SubscriptionDetails = () => {
                 setIsServiceSheetOpening(false);
             }, 100);
         } catch (error) {
-            console.error('Error opening service sheet:', error);
+            console.log('Error opening service sheet:', error);
             setIsServiceSheetOpening(false);
         }
     }, [isServiceSheetOpening]);

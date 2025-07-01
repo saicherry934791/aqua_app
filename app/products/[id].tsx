@@ -1,19 +1,19 @@
+import { apiService } from "@/api/api";
+import BackArrowIcon from "@/components/icons/BackArrowIcon";
+import ProductSkeleton from "@/components/skeltons/ProductSkeleton";
+import SkeletonWrapper from "@/components/skeltons/SkeletonWrapper";
+import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
+import { Share as ShareIcon, ShoppingCart } from "lucide-react-native";
 import React, { useEffect, useLayoutEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ImageBackground, Dimensions, Share, Alert } from "react-native";
+import { Alert, Dimensions, ImageBackground, Share, Text, TouchableOpacity, View } from "react-native";
 import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withSpring,
-    useAnimatedScrollHandler,
     interpolate,
     runOnJS,
+    useAnimatedScrollHandler,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from "react-native-reanimated";
-import { useNavigation, useRouter, useLocalSearchParams } from "expo-router";
-import BackArrowIcon from "@/components/icons/BackArrowIcon";
-import { Share as ShareIcon, ShoppingCart } from "lucide-react-native";
-import SkeletonWrapper from "@/components/skeltons/SkeletonWrapper";
-import ProductSkeleton from "@/components/skeltons/ProductSkeleton";
-import { apiService } from "@/api/api";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -123,7 +123,7 @@ export default function AquaHomeProductScreen() {
             }
             
         } catch (err) {
-            console.error('Fetch product failed:', err);
+            console.log('Fetch product failed:', err);
             setError(err instanceof Error ? err.message : 'Failed to load product');
             Alert.alert('Error', 'Failed to load product details. Please try again.');
         } finally {

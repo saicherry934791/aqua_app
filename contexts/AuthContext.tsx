@@ -141,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      console.log('Auth initialization error:', error);
       await clearAuthData();
     } finally {
       setIsLoading(false);
@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     } catch (error) {
       console.log('=== OTP Error ===');
-      console.error('Error details:', error);
+      console.log('Error details:', error);
       throw error;
     }
   };
@@ -222,7 +222,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(response.error || 'Login failed');
       }
     } catch (error: any) {
-      console.error('Verify OTP error:', error);
+      console.log('Verify OTP error:', error);
 
       // Clear confirmation on error so user can try again
       setConfirmation(null);
@@ -260,7 +260,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         currentViewRole: null,
       });
     } catch (error) {
-      console.error('Logout error:', error);
+      console.log('Logout error:', error);
     } finally {
       setIsLoading(false);
     }

@@ -1,19 +1,16 @@
-import React, { useLayoutEffect, useState, useEffect } from 'react';
+import { apiService } from '@/api/api';
+import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
+import { useNavigation, useRouter } from 'expo-router';
+import { Search } from 'lucide-react-native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   Image,
   SafeAreaView,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { Search } from 'lucide-react-native';
-import { useNavigation, useRouter } from 'expo-router';
-import { mockApiService } from '@/services/mockApi';
-import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
-import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
-import { apiService } from '@/api/api';
 
 const AquaHomeApp = () => {
   const navigation = useNavigation();
@@ -62,7 +59,7 @@ const AquaHomeApp = () => {
       //   setOrders(ordersResponse.data.slice(0, 2)); // Show only recent orders
       // }
     } catch (error) {
-      console.error('Error loading home data:', error);
+      console.log('Error loading home data:', error);
     } finally {
       setLoading(false);
     }

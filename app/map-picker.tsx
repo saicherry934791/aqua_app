@@ -1,19 +1,19 @@
-import React, { useState, useLayoutEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  FlatList,
-  Keyboard,
-} from 'react-native';
-import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { Search, X, MapPin, Check } from 'lucide-react-native';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Check, MapPin, Search, X } from 'lucide-react-native';
+import React, { useLayoutEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Keyboard,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface SearchResult {
   place_id: string;
@@ -72,7 +72,7 @@ export default function MapPickerScreen() {
         setShowSearchResults(true);
       }
     } catch (error) {
-      console.error('Error searching places:', error);
+      console.log('Error searching places:', error);
     } finally {
       setIsSearching(false);
     }
@@ -112,7 +112,7 @@ export default function MapPickerScreen() {
         setSelectedLocation(location);
       }
     } catch (error) {
-      console.error('Error selecting search result:', error);
+      console.log('Error selecting search result:', error);
       Alert.alert('Error', 'Failed to select location. Please try again.');
     }
   };

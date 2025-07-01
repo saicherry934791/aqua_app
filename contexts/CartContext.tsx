@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { createContext, ReactNode, useContext, useReducer } from 'react';
 
 export interface CartItem {
   id: string;
@@ -114,7 +114,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           dispatch({ type: 'LOAD_CART', payload: cartItems });
         }
       } catch (error) {
-        console.error('Error loading cart:', error);
+        console.log('Error loading cart:', error);
       }
     };
     loadCart();
@@ -126,7 +126,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       try {
         await AsyncStorage.setItem('cart', JSON.stringify(state.items));
       } catch (error) {
-        console.error('Error saving cart:', error);
+        console.log('Error saving cart:', error);
       }
     };
     saveCart();

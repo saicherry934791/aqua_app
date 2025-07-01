@@ -1,13 +1,12 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, RefreshControl } from 'react-native';
-import { Search } from 'lucide-react-native';
-import { useNavigation } from 'expo-router';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import Animated from 'react-native-reanimated';
-import SkeletonWrapper from '@/components/skeltons/SkeletonWrapper';
-import ProductSkeleton from '@/components/skeltons/ProductsSkeleton';
-import { mockApiService } from '@/services/mockApi';
 import { apiService } from '@/api/api';
+import ProductSkeleton from '@/components/skeltons/ProductsSkeleton';
+import SkeletonWrapper from '@/components/skeltons/SkeletonWrapper';
+import { useNavigation } from 'expo-router';
+import { Search } from 'lucide-react-native';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
+import { Pressable, Text, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const ProductsScreen = () => {
   const navigation = useNavigation();
@@ -26,7 +25,7 @@ const ProductsScreen = () => {
         setProducts(response.data.products);
       }
     } catch (err) {
-      console.error('Fetch failed', err);
+      console.log('Fetch failed', err);
     } finally {
       setLoading(false);
       setRefreshing(false);

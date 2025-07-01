@@ -1,15 +1,15 @@
-import React, { useState, useLayoutEffect, useRef } from 'react';
+import BackArrowIcon from '@/components/icons/BackArrowIcon';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { Check, X } from 'lucide-react-native';
+import React, { useLayoutEffect, useState } from 'react';
 import {
-  View,
+  Alert,
+  Platform,
+  SafeAreaView,
   Text,
   TouchableOpacity,
-  SafeAreaView,
-  Platform,
-  Alert,
+  View,
 } from 'react-native';
-import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { Check, X } from 'lucide-react-native';
-import BackArrowIcon from '@/components/icons/BackArrowIcon';
 
 // For web compatibility, we'll create a simple map placeholder
 const MapView = Platform.OS === 'web' ? 
@@ -107,7 +107,7 @@ export default function MapPickerScreen() {
         setAddress(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
       }
     } catch (error) {
-      console.error('Error reverse geocoding:', error);
+      console.log('Error reverse geocoding:', error);
       setAddress(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     }
   };
