@@ -1,97 +1,307 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
     View,
     Text,
     ScrollView,
     TouchableOpacity,
     Image,
+    RefreshControl,
+    ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
+import { apiService } from '@/api/api';
+
+interface OrderItem {
+    id: string;
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+}
+
+interface Order {
+    id: string;
+    orderNumber: string;
+    items: OrderItem[];
+    total: number;
+    status: string;
+    createdAt: string;
+    deliveryDate?: string;
+    shippingAddress: string;
+}
 
 export default function OrdersScreen() {
-
     const navigation = useNavigation();
-   
+    const router = useRouter();
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const orders = [
-        {
-            id: 1,
-            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDI2Y2UJ03ygEWrin5ev9-QEeJCu3JI59KBLIwXCfzEWvUEoL6AqRcjSV3MJxYmeDXc529dh5ayN8WvAHZN9LflMdJUrpTjjLAxOc8WzBRYJgJzt3_aaiDrfir5EhPwuDx7nfKYktMy6GHc2iQ04ZLUASZFCbt7afk2m76U55MxJKNABappth9Go4XCMP1ptwdxqb4gzmz7Atl-B0FB5h0XgeyH1YHPXWMzo_yKUsaCbRyl1lb-CQgffpzyT5-Q7qgvFJxvVC1w7w',
-            name: 'AquaHome Water Purifier',
-            status: 'Shipped',
-            orderNumber: '#123456',
-            price: '$299.99'
-        },
-        {
-            id: 2,
-            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC57u2ZwtDGJGKk0YZUS3y1twH9YzNDIFCR-dYHLepgrWNwlgRKkMtSfxf-aNgvig6j8lQe1rjLLw65Fuoz17e4i6_9PMIKeqiysBuOvYM2XxnvJYhZuNKQ2SXEhxv2P-V3lshBTbC4PBHEL9rexsuZpBw0Q82diziO2PILE_vHW6Hi7rlm2vGCzMV1HATvJpqlKKvFUfw1sM6Tvo0aapa9sroG6wVxRPnJP8ZgBR4rmmoYLAAmMYvGCPBdMqxBH7QxWT9jWn3NAw',
-            name: 'AquaHome Filter Replacement',
-            status: 'Delivered',
-            orderNumber: '#789012',
-            price: '$49.99'
-        },
-        {
-            id: 3,
-            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOPYKGNZoiUwCzpEKpO-PZipEDaxjHwJWA98DdqhFneXkatFD4XcH58CMyUg2owMhmFZ7R6ps4brWrSgce2evueeiOKUCrhYM6UHmOHE6b7hIQ4Tz68WLn7G-CaFEyJ3BykjiYWUTveM7LVm0lMXSZy-Qn10qlII0eSTms9wkimy0rda137GkwBz3sm1ZZaheFXocuIBx2VimqYx7l-JcNsv3FzsFivOVJiGJRgBGECAeLI25fd_cSFX55_2R5qzVngn9GOYn6yQ',
-            name: 'AquaHome Water Purifier',
-            status: 'Cancelled',
-            orderNumber: '#345678',
-            price: '$299.99'
-        },
-        {
-            id: 4,
-            image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDHukcB-NHgLq5ls9G4hIj68Q6zlM7QUIViZxk5Wnq9_4ya_g1pl4I6E2C1gUI19n8aZxvPiBQhDk9ncuYnLcxgP5cWa26GFJ8S7bUDLA6_iAGfSzzri9_ruGrlWFFZ3ZKFPqm_2Bf_voPIw7WPRr8e9ozJt-dnDoViyC3-Oz-5PuIMFFKc87I6aXuBEP0po4R-42YDEHXdeF7Bu2UP9uSa8TxcvulcFRFvPygA6geU4CuJpRuvF3UwKnUyVY1yaDBkRnM79kb2AA',
-            name: 'AquaHome Filter Replacement',
-            status: 'Processing',
-            orderNumber: '#901234',
-            price: '$49.99'
+    const fetchOrders = async () => {
+        try {
+            setError(null);
+            const response = await apiService.get('/orders/my-orders?status=payment_completed');
+            
+            if (response.success) {
+                setOrders(response.data.orders || []);
+            } else {
+                setError(response.error || 'Failed to fetch orders');
+            }
+        } catch (err: any) {
+            console.log('Error fetching orders:', err);
+            setError('Failed to load orders. Please try again.');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
-    ];
+    };
 
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchOrders();
+    };
 
+    useEffect(() => {
+        fetchOrders();
+    }, []);
+
+    const formatDate = (dateString: string) => {
+        return new Date(dateString).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status.toLowerCase()) {
+            case 'delivered':
+                return '#4ade80';
+            case 'shipped':
+                return '#3b82f6';
+            case 'processing':
+                return '#f59e0b';
+            case 'cancelled':
+                return '#ef4444';
+            default:
+                return '#6b7280';
+        }
+    };
+
+    if (loading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+                <ActivityIndicator size="large" color="#4fa3c4" />
+                <Text style={{ 
+                    marginTop: 16, 
+                    fontSize: 16, 
+                    fontFamily: 'SpaceGrotesk_500Medium',
+                    color: '#687b82' 
+                }}>
+                    Loading your orders...
+                </Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white', padding: 20 }}>
+                <Text style={{ 
+                    fontSize: 18, 
+                    fontFamily: 'SpaceGrotesk_600SemiBold',
+                    color: '#ef4444',
+                    textAlign: 'center',
+                    marginBottom: 16
+                }}>
+                    {error}
+                </Text>
+                <TouchableOpacity
+                    onPress={fetchOrders}
+                    style={{
+                        backgroundColor: '#4fa3c4',
+                        paddingHorizontal: 24,
+                        paddingVertical: 12,
+                        borderRadius: 8,
+                    }}
+                >
+                    <Text style={{ 
+                        color: 'white', 
+                        fontFamily: 'SpaceGrotesk_600SemiBold',
+                        fontSize: 16
+                    }}>
+                        Try Again
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     return (
-        <ScrollView className="flex-1 bg-white">
-
-
-            {/* Past Orders Section */}
-            <Text className="text-primary text-2xl font-grotesk-bold px-4 pb-2 pt-4">
-                Past Orders
-            </Text>
-
-            {/* Orders List */}
-            {orders.map((order) => (
-                <TouchableOpacity
-                    key={order.id}
-                    onPress={() => navigation.navigate('orders/[id]', { id: order.id })}
-
-                    className="flex-row gap-4 bg-white px-4 py-3 justify-between"
-                >
-                    <View className="flex-row items-start gap-4 flex-1">
-                        <Image
-                            source={{ uri: order.image }}
-                            className="w-[80px] h-[80px] rounded-lg"
-                            resizeMode="cover"
-                        />
-                        <View className="flex-1 flex-col justify-center">
-                            <Text className="text-xl text-primary font-grotesk-bold">
-                                {order.name}
-                            </Text>
-                            <Text className="text-secondary text-lg font-grotesk">
-                                Status: {order.status}
-                            </Text>
-                            <Text className="text-secondary text-lg font-grotesk">
-                                Order {order.orderNumber}
-                            </Text>
-                        </View>
-                    </View>
-                    <View className="justify-center">
-                        <Text className="text-primary text-xl font-grotesk-medium">
-                            {order.price}
+        <ScrollView 
+            style={{ flex: 1, backgroundColor: 'white' }}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+        >
+            {orders.length === 0 ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, minHeight: 400 }}>
+                    <Text style={{ 
+                        fontSize: 24, 
+                        fontFamily: 'SpaceGrotesk_700Bold',
+                        color: '#121516',
+                        textAlign: 'center',
+                        marginBottom: 8
+                    }}>
+                        No Orders Yet
+                    </Text>
+                    <Text style={{ 
+                        fontSize: 16, 
+                        fontFamily: 'SpaceGrotesk_400Regular',
+                        color: '#687b82',
+                        textAlign: 'center',
+                        marginBottom: 24
+                    }}>
+                        Start shopping to see your orders here
+                    </Text>
+                    <TouchableOpacity
+                        onPress={() => router.push('/(tabs)/products')}
+                        style={{
+                            backgroundColor: '#4fa3c4',
+                            paddingHorizontal: 24,
+                            paddingVertical: 12,
+                            borderRadius: 24,
+                        }}
+                    >
+                        <Text style={{ 
+                            color: 'white', 
+                            fontFamily: 'SpaceGrotesk_600SemiBold',
+                            fontSize: 16
+                        }}>
+                            Browse Products
                         </Text>
-                    </View>
-                </TouchableOpacity>
-            ))}
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <>
+                    <Text style={{ 
+                        fontSize: 24, 
+                        fontFamily: 'SpaceGrotesk_700Bold',
+                        color: '#121516',
+                        paddingHorizontal: 16,
+                        paddingBottom: 8,
+                        paddingTop: 16
+                    }}>
+                        Your Orders ({orders.length})
+                    </Text>
+
+                    {orders.map((order) => (
+                        <TouchableOpacity
+                            key={order.id}
+                            onPress={() => router.push(`/orders/${order.id}`)}
+                            style={{
+                                backgroundColor: 'white',
+                                marginHorizontal: 16,
+                                marginVertical: 8,
+                                borderRadius: 12,
+                                padding: 16,
+                                borderWidth: 1,
+                                borderColor: '#f1f3f4',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 3,
+                            }}
+                        >
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ 
+                                        fontSize: 18, 
+                                        fontFamily: 'SpaceGrotesk_700Bold',
+                                        color: '#121516',
+                                        marginBottom: 4
+                                    }}>
+                                        Order #{order.orderNumber}
+                                    </Text>
+                                    <Text style={{ 
+                                        fontSize: 14, 
+                                        fontFamily: 'SpaceGrotesk_400Regular',
+                                        color: '#687b82'
+                                    }}>
+                                        {formatDate(order.createdAt)}
+                                    </Text>
+                                </View>
+                                <View style={{
+                                    backgroundColor: getStatusColor(order.status),
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 4,
+                                    borderRadius: 12,
+                                }}>
+                                    <Text style={{ 
+                                        fontSize: 12, 
+                                        fontFamily: 'SpaceGrotesk_600SemiBold',
+                                        color: 'white',
+                                        textTransform: 'capitalize'
+                                    }}>
+                                        {order.status}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {order.items && order.items.length > 0 && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                    {order.items[0].image && (
+                                        <Image
+                                            source={{ uri: order.items[0].image }}
+                                            style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }}
+                                            resizeMode="cover"
+                                        />
+                                    )}
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ 
+                                            fontSize: 16, 
+                                            fontFamily: 'SpaceGrotesk_600SemiBold',
+                                            color: '#121516',
+                                            marginBottom: 2
+                                        }}>
+                                            {order.items[0].name}
+                                        </Text>
+                                        {order.items.length > 1 && (
+                                            <Text style={{ 
+                                                fontSize: 14, 
+                                                fontFamily: 'SpaceGrotesk_400Regular',
+                                                color: '#687b82'
+                                            }}>
+                                                +{order.items.length - 1} more item{order.items.length > 2 ? 's' : ''}
+                                            </Text>
+                                        )}
+                                    </View>
+                                </View>
+                            )}
+
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ 
+                                    fontSize: 20, 
+                                    fontFamily: 'SpaceGrotesk_700Bold',
+                                    color: '#4fa3c4'
+                                }}>
+                                    ₹{order.total.toLocaleString()}
+                                </Text>
+                                <Text style={{ 
+                                    fontSize: 14, 
+                                    fontFamily: 'SpaceGrotesk_500Medium',
+                                    color: '#4fa3c4'
+                                }}>
+                                    View Details →
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    ))}
+                </>
+            )}
         </ScrollView>
     );
 }
