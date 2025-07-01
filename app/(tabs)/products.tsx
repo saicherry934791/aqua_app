@@ -7,6 +7,7 @@ import Animated from 'react-native-reanimated';
 import SkeletonWrapper from '@/components/skeltons/SkeletonWrapper';
 import ProductSkeleton from '@/components/skeltons/ProductsSkeleton';
 import { mockApiService } from '@/services/mockApi';
+import { apiService } from '@/api/api';
 
 const ProductsScreen = () => {
   const navigation = useNavigation();
@@ -19,9 +20,10 @@ const ProductsScreen = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await mockApiService.getProducts();
+      const response = await apiService.get('/products')
+      console.log('products are in fetch ',JSON.stringify(response.data.products))
       if (response.success) {
-        setProducts(response.data);
+        setProducts(response.data.products);
       }
     } catch (err) {
       console.error('Fetch failed', err);
@@ -49,7 +51,7 @@ const ProductsScreen = () => {
     fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter(product =>
+  const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -90,7 +92,7 @@ const ProductsScreen = () => {
                 <View className="mb-3">
                   <Animated.Image
                
-                    source={{ uri: product.image }}
+                    source={{ uri: product.images[0] }}
                     className="w-full aspect-square rounded-xl"
                     resizeMode="cover"
                   />
@@ -103,7 +105,7 @@ const ProductsScreen = () => {
                     {product.description}
                   </Text>
                   <Text className="text-[#4fa3c4] font-grotesk-bold text-lg">
-                    ₹{product.price.toLocaleString()}
+                    ₹{product.rentPrice}
                   </Text>
                 </View>
               </Pressable>

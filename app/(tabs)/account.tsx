@@ -38,7 +38,7 @@ export default function ProfileScreen() {
 
     const navigation = useNavigation();
     const router = useRouter();
-    const { logout, state } = useAuth();
+    const { logout } = useAuth();
     const editActionSheetRef = useRef<ActionSheetRef>(null);
 
     useLayoutEffect(() => {
@@ -171,7 +171,7 @@ export default function ProfileScreen() {
                             <View className="flex-col items-center justify-center">
                                 <View className="flex-row items-center gap-2">
                                     <Text className="text-[#121517] text-3xl font-grotesk-bold text-center">
-                                        {state.user?.name || profileData.name}
+                                        { profileData.name}
                                     </Text>
                                     <TouchableOpacity
                                         onPress={() => openEditSheet('name', 'Full Name')}
@@ -203,7 +203,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Email</Text>
                         <Text style={{ color: '#697A82' }} className="text-base font-grotesk">
-                            {state.user?.email || profileData.email}
+                            { profileData.email}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -223,7 +223,7 @@ export default function ProfileScreen() {
                     </View>
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Phone</Text>
-                        <Text className="text-[#687b82] text-sm">{state.user?.phone || profileData.phone}</Text>
+                        <Text className="text-[#687b82] text-sm">{ profileData.phone}</Text>
                     </View>
                     <TouchableOpacity
                         onPress={() => openEditSheet('phone', 'Phone Number', 'phone-pad')}
@@ -243,7 +243,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Alternate Phone</Text>
                         <Text className="text-[#687b82] text-sm">
-                            {state.user?.alternatePhone || profileData.alternatePhone}
+                            { profileData.alternatePhone}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -264,7 +264,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Address</Text>
                         <Text className="text-[#687b82] text-sm">
-                            {state.user?.address || profileData.address}
+                            { profileData.address}
                         </Text>
                     </View>
                     <TouchableOpacity

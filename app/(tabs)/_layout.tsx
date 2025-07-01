@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
 import { Platform, Text, View, TouchableOpacity } from 'react-native';
 import { Grid3x2 as Grid3X3, Grid3x2 as Grid3X3Icon, Chrome as Home, ShoppingCart, ShoppingCart as ShoppingCartIcon, User, User as UserIcon } from 'lucide-react-native';
@@ -14,10 +14,20 @@ import OrdersIcon from '@/components/icons/OrdersIcon';
 import OrdersActiveIcon from '@/components/icons/OrdersActiveIcon';
 import { useCart } from '@/contexts/CartContext';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
   const { state } = useCart();
   const router = useRouter();
+  const { isAuthenticated,user } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Redirect href="/(auth)" />;
+  }
+
+  if(!user?.hasOnboarded){
+    return <Redirect href="/OnboardDetails" />;
+  }
 
   const CartHeaderButton = () => (
     <TouchableOpacity
@@ -114,9 +124,9 @@ export default function TabLayout() {
           title: 'Orders',
           tabBarIcon: ({ color, size, focused }) =>
             focused ? (
-              <OrdersActiveIcon/>
+              <OrdersActiveIcon />
             ) : (
-              <OrdersIcon/>
+              <OrdersIcon />
             ),
         }}
       />

@@ -13,6 +13,7 @@ import { useNavigation, useRouter } from 'expo-router';
 import { mockApiService } from '@/services/mockApi';
 import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
 import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
+import { apiService } from '@/api/api';
 
 const AquaHomeApp = () => {
   const navigation = useNavigation();
@@ -37,18 +38,29 @@ const AquaHomeApp = () => {
   const loadHomeData = async () => {
     try {
       setLoading(true);
-      const [productsResponse, ordersResponse] = await Promise.all([
-        mockApiService.getProducts(),
-        mockApiService.getOrders('1'),
-      ]);
 
-      if (productsResponse.success) {
-        setProducts(productsResponse.data.slice(0, 3)); // Show only first 3 products
+      const response = await apiService.get('/homescreen');
+
+      if(response.success){
+        console.log('data homescreen is ',response.data)
+        setProducts(response.data.popularProducts)
+        setOrders(response.data.recentOrders)
+        
+
       }
 
-      if (ordersResponse.success) {
-        setOrders(ordersResponse.data.slice(0, 2)); // Show only recent orders
-      }
+      // const [productsResponse, ordersResponse] = await Promise.all([
+      //   mockApiService.getProducts(),
+      //   mockApiService.getOrders('1'),
+      // ]);
+
+      // if (productsResponse.success) {
+      //   setProducts(productsResponse.data.slice(0, 3)); // Show only first 3 products
+      // }
+
+      // if (ordersResponse.success) {
+      //   setOrders(ordersResponse.data.slice(0, 2)); // Show only recent orders
+      // }
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {

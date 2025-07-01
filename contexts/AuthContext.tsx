@@ -1,25 +1,14 @@
+import { apiService } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import { apiService } from '@/services/api';
 
-// Firebase imports with platform check
-let auth: any = null;
-let signInWithPhoneNumber: any = null;
-let signOut: any = null;
-let FirebaseAuthTypes: any = null;
-
-if (Platform.OS !== 'web') {
-  try {
-    const firebaseAuth = require('@react-native-firebase/auth');
-    auth = firebaseAuth.default;
-    signInWithPhoneNumber = firebaseAuth.default().signInWithPhoneNumber;
-    signOut = firebaseAuth.default().signOut;
-    FirebaseAuthTypes = require('@react-native-firebase/auth').FirebaseAuthTypes;
-  } catch (error) {
-    console.log('Firebase not available on this platform');
-  }
-}
+import {
+  getAuth,
+  signInWithPhoneNumber,
+  signOut
+} from '@react-native-firebase/auth';
+import { router } from 'expo-router';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -43,11 +32,12 @@ export interface User {
   franchiseId?: string;
   franchiseName?: string;
   permissions: string[];
-  profile: {
-    name: string;
-    email?: string;
-    avatar?: string;
-  };
+  hasOnboarded: boolean;
+  name: string;
+  email?: string;
+  avatar?: string;
+  address?: string;
+
 }
 
 export interface ViewAsState {
@@ -68,7 +58,10 @@ interface AuthContextType {
 
   // Auth methods
   sendOTP: (phoneNumber: string, customerType: CustomerType) => Promise<any>;
-  verifyOTP: (otp: string, role: string) => Promise<boolean>;
+  verifyOTP: (otp: string, role: string) => Promise<{
+    nextScreen: string;
+    success: boolean;
+  }>;
   logout: () => Promise<void>;
 
   // View As functionality (client-side only)
@@ -133,7 +126,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // Validate token with backend
-        await refreshUser();
+        try {
+          await refreshUser();
+        } catch (error) {
+          // If refresh fails during initialization, clear everything
+          console.log('Token validation failed during initialization');
+          await clearAuthData();
+          setUser(null);
+          setViewAsState({
+            isViewingAs: false,
+            originalUser: null,
+            currentViewRole: null,
+          });
+        }
       }
     } catch (error) {
       console.error('Auth initialization error:', error);
@@ -153,34 +158,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const formattedPhone = '+91' + phoneNumber.replace(/\D/g, '');
       console.log('Formatted phone:', formattedPhone);
 
-      if (Platform.OS === 'web') {
-        // For web, use a mock OTP service or your backend
-        console.log('Web platform detected, using mock OTP');
-        const mockConfirmation = {
-          confirm: async (otp: string) => {
-            if (otp === '123456') {
-              return {
-                user: {
-                  getIdToken: async () => 'mock_id_token_' + Date.now()
-                }
-              };
-            }
-            throw new Error('Invalid OTP');
-          }
-        };
-        setConfirmation(mockConfirmation);
-        return mockConfirmation;
-      } else {
-        // For native platforms, use Firebase
-        if (!auth || !signInWithPhoneNumber) {
-          throw new Error('Firebase Auth not available');
-        }
-        
-        const confirmation = await signInWithPhoneNumber(formattedPhone);
-        console.log('=== OTP Sent Successfully ===');
-        setConfirmation(confirmation);
-        return confirmation;
-      }
+
+
+
+      const confirmation = await signInWithPhoneNumber(getAuth(), formattedPhone);
+      console.log('=== OTP Sent Successfully ===');
+      setConfirmation(confirmation);
+      return confirmation;
+
     } catch (error) {
       console.log('=== OTP Error ===');
       console.error('Error details:', error);
@@ -188,7 +173,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const verifyOTP = async (otp: string, role: string): Promise<boolean> => {
+  const verifyOTP = async (otp: string, role: string): Promise<{
+    nextScreen: string;
+    success: boolean;
+  }> => {
     try {
       setIsLoading(true);
       if (!confirmation) {
@@ -204,13 +192,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Send idToken and role to backend for authentication
       const response = await apiService.post('/auth/login', {
         idToken,
-        role, // Send the role that was selected during login
+        role: 'customer' // Send the role that was selected during login
       });
 
       console.log('Backend login response:', response);
 
       if (response.success) {
         const { accessToken, refreshToken, user: userData } = response.data;
+
+        console.log('userData', userData);
 
         // Store tokens and user data
         await AsyncStorage.multiSet([
@@ -221,16 +211,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         setUser(userData);
         setConfirmation(null); // Clear confirmation after successful verification
-        return true;
+
+        let nextScreen = !userData.hasOnboarded ? '/OnboardDetails' : '/';
+
+        return {
+          nextScreen: nextScreen,
+          success: true,
+        };
       } else {
         throw new Error(response.error || 'Login failed');
       }
     } catch (error: any) {
       console.error('Verify OTP error:', error);
-      
+
       // Clear confirmation on error so user can try again
       setConfirmation(null);
-      
+
       // Re-throw with a user-friendly message
       if (error.code === 'auth/invalid-verification-code') {
         throw new Error('Invalid OTP. Please check the code and try again.');
@@ -248,10 +244,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
 
-      // Sign out from Firebase (only on native platforms)
-      if (Platform.OS !== 'web' && signOut) {
-        await signOut();
-      }
+
+      await signOut(getAuth());
+
 
       // Clear local storage
       await clearAuthData();
@@ -362,11 +357,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    
+
     // If viewing as someone else, check original user's permissions
     const checkUser = viewAsState.isViewingAs ? viewAsState.originalUser : user;
     if (!checkUser) return false;
-    
+
     return checkUser.permissions.includes(permission);
   };
 
@@ -408,22 +403,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshUser = async () => {
     try {
       const response = await apiService.get('/auth/me');
+      console.log('response in refreshuser ', response);
       if (response.success) {
         // Only update if not in view-as mode
-        if (!viewAsState.isViewingAs) {
-          setUser(response.data);
-          await AsyncStorage.setItem('userProfile', JSON.stringify(response.data));
+
+        setUser({
+          ...response.data.user,
+          hasOnboarded: response.data.user.hasOnboarded,
+        });
+
+        if (response.data.user.hasOnboarded) {
+          router.replace('/(tabs)');
+        } else {
+          router.replace('/(auth)');
         }
+
+      } else {
+        router.replace('/(auth)');
+        // Handle non-success response
+        throw new Error('Failed to refresh user data');
+
       }
     } catch (error: any) {
-      console.error('Refresh user error:', error);
-      // If token is invalid, clear auth data
-      if (error?.response?.status === 401) {
-        await clearAuthData();
-        setUser(null);
-      }
+      console.log('Refresh user error:', error);
+
+      // Clear auth data immediately when refresh fails
+      await clearAuthData();
+      setUser(null);
+      setViewAsState({
+        isViewingAs: false,
+        originalUser: null,
+        currentViewRole: null,
+      });
+
+      // Then redirect to auth screen
+      router.replace('/(auth)');
     }
   };
+
+
 
   const value: AuthContextType = {
     user,

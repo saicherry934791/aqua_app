@@ -15,6 +15,7 @@ import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
 import { CreditCard, MapPin, User, Phone, Navigation, Check } from 'lucide-react-native';
 import { razorpayService } from '@/services/razorpay';
 import BackArrowIcon from '@/components/icons/BackArrowIcon';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ShippingInfo {
   fullName: string;
@@ -37,18 +38,30 @@ export default function CheckoutScreen() {
   const navigation = useNavigation();
   const router = useRouter();
   const { directCheckout, checkoutData, locationData } = useLocalSearchParams();
+  const { user } = useAuth();
+
+  console.log('user checkout is', user);
   
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [items, setItems] = useState<CheckoutItem[]>([]);
   const [total, setTotal] = useState(0);
   const [locationSelected, setLocationSelected] = useState(false);
-  
+
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
-    fullName: '',
-    phone: '',
-    address: '',
+    fullName: user?.name || '',
+    phone: user?.phone?.split('+91')[1] || '',
+    address: user?.address || '',
+    latitude: user?.latitude,
+    longitude: user?.longitude,
   });
+
+  // Check if user already has location coordinates
+  React.useEffect(() => {
+    if (user?.latitude && user?.longitude && user?.address) {
+      setLocationSelected(true);
+    }
+  }, [user]);
 
   // Initialize checkout data
   React.useEffect(() => {
@@ -70,6 +83,8 @@ export default function CheckoutScreen() {
     if (locationData) {
       try {
         const data = JSON.parse(locationData as string);
+        console.log('Received location data:', data);
+        
         setShippingInfo(prev => ({
           ...prev,
           address: data.address,
@@ -79,6 +94,7 @@ export default function CheckoutScreen() {
         setLocationSelected(true);
       } catch (error) {
         console.error('Error parsing location data:', error);
+        Alert.alert('Error', 'Failed to parse location data');
       }
     }
   }, [locationData]);
@@ -111,8 +127,13 @@ export default function CheckoutScreen() {
       return false;
     }
 
-    if (!shippingInfo.address.trim() || !locationSelected) {
-      Alert.alert('Error', 'Please select your delivery address from the map');
+    if (!shippingInfo.address.trim()) {
+      Alert.alert('Error', 'Please enter your delivery address');
+      return false;
+    }
+
+    if (!locationSelected || !shippingInfo.latitude || !shippingInfo.longitude) {
+      Alert.alert('Error', 'Please select your delivery address from the map to ensure accurate delivery');
       return false;
     }
 
@@ -122,12 +143,13 @@ export default function CheckoutScreen() {
   const getCurrentLocation = async () => {
     try {
       setLocationLoading(true);
-      
+
       if (Platform.OS === 'web') {
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             async (position) => {
               const { latitude, longitude } = position.coords;
+              console.log('Current location:', { latitude, longitude });
               await reverseGeocode(latitude, longitude);
               setLocationLoading(false);
               Alert.alert('Success', 'Current location detected!');
@@ -135,19 +157,22 @@ export default function CheckoutScreen() {
             (error) => {
               console.error('Geolocation error:', error);
               setLocationLoading(false);
-              Alert.alert('Error', 'Failed to get current location. Please use map picker.');
+              Alert.alert('Location Error', 'Failed to get current location. Please use map picker instead.');
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
           );
         } else {
           setLocationLoading(false);
-          Alert.alert('Error', 'Geolocation is not supported by this browser.');
+          Alert.alert('Error', 'Geolocation is not supported by this browser. Please use map picker.');
         }
+      } else {
+        // For React Native, you would use expo-location or react-native-geolocation-service
+        Alert.alert('Info', 'Please use the map picker to select your location.');
+        setLocationLoading(false);
       }
     } catch (error) {
       console.error('Error getting location:', error);
       Alert.alert('Error', 'Failed to get current location. Please use map picker.');
-    } finally {
       setLocationLoading(false);
     }
   };
@@ -158,9 +183,11 @@ export default function CheckoutScreen() {
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
       );
       const data = await response.json();
-      
+
       if (data.results && data.results.length > 0) {
         const address = data.results[0].formatted_address;
+        console.log('Reverse geocoded address:', address);
+        
         setShippingInfo(prev => ({
           ...prev,
           address,
@@ -168,9 +195,12 @@ export default function CheckoutScreen() {
           longitude,
         }));
         setLocationSelected(true);
+      } else {
+        throw new Error('No address found for the coordinates');
       }
     } catch (error) {
       console.error('Error reverse geocoding:', error);
+      Alert.alert('Error', 'Failed to get address for the selected location');
     }
   };
 
@@ -179,6 +209,9 @@ export default function CheckoutScreen() {
       pathname: '/map-picker',
       params: {
         returnTo: '/checkout',
+        currentLatitude: shippingInfo.latitude?.toString() || '',
+        currentLongitude: shippingInfo.longitude?.toString() || '',
+        currentAddress: '',
       },
     });
   };
@@ -186,15 +219,36 @@ export default function CheckoutScreen() {
   const handlePayment = async () => {
     if (!validateForm()) return;
 
+    // Log the shipping info with coordinates before payment
+    console.log('Shipping info with coordinates:', shippingInfo);
+
     setLoading(true);
     try {
       const totalAmount = total;
       const deliveryFee = total > 500 ? 0 : 50;
       const finalTotal = totalAmount + deliveryFee;
-      
-      // Create order
-      const order = await razorpayService.createOrder(finalTotal);
-      
+
+      // Prepare order data with location coordinates
+      const orderData = {
+        items,
+        shippingInfo: {
+          fullName: shippingInfo.fullName,
+          phone: `+91${shippingInfo.phone}`,
+          address: shippingInfo.address,
+          latitude: shippingInfo.latitude,
+          longitude: shippingInfo.longitude,
+        },
+        totalAmount,
+        deliveryFee,
+        finalTotal,
+        userId: user?.id,
+      };
+
+      console.log('Order data being sent:', orderData);
+
+      // Create order with shipping info including coordinates
+      const order = await razorpayService.createOrder(finalTotal, orderData);
+
       // Prepare Razorpay options
       const options = {
         description: 'AquaHome Purchase',
@@ -205,24 +259,30 @@ export default function CheckoutScreen() {
         name: 'AquaHome',
         order_id: order.order_id,
         prefill: {
-          email: 'customer@example.com',
-          contact: shippingInfo.phone,
+          email: user?.email || 'customer@example.com',
+          contact: `+91${shippingInfo.phone}`,
           name: shippingInfo.fullName,
         },
         theme: {
           color: '#4fa3c4',
         },
+        notes: {
+          address: shippingInfo.address,
+          latitude: shippingInfo.latitude?.toString() || '',
+          longitude: shippingInfo.longitude?.toString() || '',
+        },
       };
 
       // Open Razorpay checkout
       const paymentResult = await razorpayService.openCheckout(options);
-      
+
       // Verify payment
       if (paymentResult.razorpay_payment_id) {
         const isVerified = await razorpayService.verifyPayment(
           paymentResult.razorpay_payment_id,
           paymentResult.razorpay_order_id || '',
-          paymentResult.razorpay_signature || ''
+          paymentResult.razorpay_signature || '',
+          orderData // Pass order data for backend processing
         );
 
         if (isVerified) {
@@ -232,6 +292,7 @@ export default function CheckoutScreen() {
               paymentId: paymentResult.razorpay_payment_id,
               orderId: paymentResult.razorpay_order_id,
               amount: finalTotal.toString(),
+              shippingInfo: JSON.stringify(orderData.shippingInfo),
             },
           });
         } else {
@@ -251,13 +312,13 @@ export default function CheckoutScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView 
-          style={{ flex: 1 }} 
+        <ScrollView
+          style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 120 }}
         >
@@ -337,7 +398,7 @@ export default function CheckoutScreen() {
                   ₹{total.toLocaleString()}
                 </Text>
               </View>
-              
+
               <View style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',
@@ -395,7 +456,7 @@ export default function CheckoutScreen() {
               Delivery Information
             </Text>
 
-            {/* Full Name - Reduced Height */}
+            {/* Full Name */}
             <View style={{ marginBottom: 14 }}>
               <Text style={{
                 fontSize: 14,
@@ -432,7 +493,7 @@ export default function CheckoutScreen() {
               </View>
             </View>
 
-            {/* Phone Number - Reduced Height */}
+            {/* Phone Number */}
             <View style={{ marginBottom: 14 }}>
               <Text style={{
                 fontSize: 14,
@@ -487,14 +548,14 @@ export default function CheckoutScreen() {
                 color: '#121516',
                 marginBottom: 6,
               }}>
-                Delivery Address
+                Delivery Address *
               </Text>
-              
+
               <View style={{
                 backgroundColor: '#f8f9fa',
                 borderRadius: 8,
                 borderWidth: 1,
-                borderColor: locationSelected ? '#4fa3c4' : '#e1e5e7',
+                borderColor: locationSelected ? '#4fa3c4' : '#ff6b6b',
                 overflow: 'hidden',
               }}>
                 {/* Address Display */}
@@ -508,22 +569,34 @@ export default function CheckoutScreen() {
                   <MapPin size={16} color="#687b82" style={{ marginTop: 2 }} />
                   <View style={{ flex: 1, marginLeft: 8 }}>
                     {shippingInfo.address ? (
-                      <Text style={{
-                        fontSize: 14,
-                        fontFamily: 'SpaceGrotesk_400Regular',
-                        color: '#121516',
-                        lineHeight: 18,
-                      }}>
-                        {shippingInfo.address}
-                      </Text>
+                      <>
+                        <Text style={{
+                          fontSize: 14,
+                          fontFamily: 'SpaceGrotesk_400Regular',
+                          color: '#121516',
+                          lineHeight: 18,
+                        }}>
+                          {shippingInfo.address}
+                        </Text>
+                        {shippingInfo.latitude && shippingInfo.longitude && (
+                          <Text style={{
+                            fontSize: 11,
+                            fontFamily: 'SpaceGrotesk_400Regular',
+                            color: '#687b82',
+                            marginTop: 4,
+                          }}>
+                            📍 {shippingInfo.latitude.toFixed(6)}, {shippingInfo.longitude.toFixed(6)}
+                          </Text>
+                        )}
+                      </>
                     ) : (
                       <Text style={{
                         fontSize: 14,
                         fontFamily: 'SpaceGrotesk_400Regular',
-                        color: '#687b82',
+                        color: '#ff6b6b',
                         fontStyle: 'italic',
                       }}>
-                        Please select your delivery address
+                        Please select your delivery address on the map
                       </Text>
                     )}
                   </View>
@@ -539,7 +612,7 @@ export default function CheckoutScreen() {
                     </View>
                   )}
                 </View>
-                
+
                 {/* Location Action Buttons */}
                 <View style={{
                   flexDirection: 'row',
@@ -554,7 +627,7 @@ export default function CheckoutScreen() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      paddingVertical: 8,
+                      paddingVertical: 10,
                       backgroundColor: '#e8f4f8',
                     }}
                   >
@@ -562,19 +635,19 @@ export default function CheckoutScreen() {
                       <ActivityIndicator size="small" color="#4fa3c4" />
                     ) : (
                       <>
-                        <Navigation size={12} color="#4fa3c4" />
+                        <Navigation size={14} color="#4fa3c4" />
                         <Text style={{
                           fontSize: 12,
                           fontFamily: 'SpaceGrotesk_600SemiBold',
                           color: '#4fa3c4',
-                          marginLeft: 3,
+                          marginLeft: 4,
                         }}>
                           Current Location
                         </Text>
                       </>
                     )}
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     onPress={openMapPicker}
                     style={{
@@ -582,34 +655,37 @@ export default function CheckoutScreen() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      paddingVertical: 8,
+                      paddingVertical: 10,
                       backgroundColor: '#fff3e0',
                       borderLeftWidth: 1,
                       borderLeftColor: '#e1e5e7',
                     }}
                   >
-                    <MapPin size={12} color="#ff9800" />
+                    <MapPin size={14} color="#ff9800" />
                     <Text style={{
                       fontSize: 12,
                       fontFamily: 'SpaceGrotesk_600SemiBold',
                       color: '#ff9800',
-                      marginLeft: 3,
+                      marginLeft: 4,
                     }}>
                       Select on Map
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
-              
+
               {/* Helper Text */}
               <Text style={{
                 fontSize: 11,
                 fontFamily: 'SpaceGrotesk_400Regular',
-                color: '#687b82',
-                marginTop: 4,
+                color: locationSelected ? '#4fa3c4' : '#ff6b6b',
+                marginTop: 6,
                 textAlign: 'center',
               }}>
-                📍 Select your exact location for accurate delivery
+                {locationSelected 
+                  ? '✅ Location confirmed for accurate delivery' 
+                  : '⚠️ Map selection required for precise delivery location'
+                }
               </Text>
             </View>
           </View>
@@ -671,12 +747,12 @@ export default function CheckoutScreen() {
                   color: 'white',
                   marginLeft: 8,
                 }}>
-                  Pay ₹{finalTotal.toLocaleString()}
+                  {locationSelected ? `Pay ₹${finalTotal.toLocaleString()}` : 'Select Location First'}
                 </Text>
               </>
             )}
           </TouchableOpacity>
-          
+
           <Text style={{
             fontSize: 10,
             fontFamily: 'SpaceGrotesk_400Regular',

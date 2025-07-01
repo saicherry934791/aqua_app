@@ -1,15 +1,15 @@
+import { CustomerType, useAuth } from '@/contexts/AuthContext';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-    View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    Alert,
-    ActivityIndicator,
+    View,
 } from 'react-native';
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useNavigation, useRouter, useLocalSearchParams } from 'expo-router';
-import { useAuth, CustomerType } from '@/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const OTPScreen = () => {
@@ -17,7 +17,7 @@ const OTPScreen = () => {
     const router = useRouter();
     const { phone } = useLocalSearchParams();
     const { verifyOTP, sendOTP } = useAuth();
-    
+
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [isComplete, setIsComplete] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -47,14 +47,14 @@ const OTPScreen = () => {
                 // Extract only digits and limit to 6
                 const pastedCode = value.replace(/[^0-9]/g, '').slice(0, 6);
                 const newOtp = Array(6).fill('');
-                
+
                 // Fill the array with pasted digits
                 for (let i = 0; i < Math.min(pastedCode.length, 6); i++) {
                     newOtp[i] = pastedCode[i];
                 }
-                
+
                 setOtp(newOtp);
-                
+
                 // Focus management after paste
                 if (pastedCode.length >= 6) {
                     inputRefs.current[5]?.blur();
@@ -101,12 +101,11 @@ const OTPScreen = () => {
             setLoading(true);
             try {
                 const result = await verifyOTP(otpString, CustomerType.CUSTOMER);
-                if (result) {
-                    console.log('OTP verification successful, navigating...');
+                if (result.success) {
+                    console.log('OTP verification successful, navigating...', result);
                     // Small delay to ensure state is updated
                     setTimeout(() => {
-                        // Don't navigate manually - let the index screen handle it based on auth state
-                        router.replace('/');
+                        router.replace(result.nextScreen as any);
                     }, 100);
                 }
             } catch (error: any) {
@@ -188,8 +187,8 @@ const OTPScreen = () => {
 
             <Text style={styles.didntReceiveText}>Didn't receive the code?</Text>
 
-            <TouchableOpacity 
-                onPress={handleResendOTP} 
+            <TouchableOpacity
+                onPress={handleResendOTP}
                 style={styles.resendContainer}
                 disabled={resendLoading || loading}
             >

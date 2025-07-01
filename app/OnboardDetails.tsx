@@ -19,6 +19,7 @@ import { MapPin, User, Phone, Mail, Navigation, Check, Search } from 'lucide-rea
 import { useAuth } from '@/contexts/AuthContext';
 import * as Location from 'expo-location';
 import LoadingSkeleton from '@/components/skeletons/LoadingSkeleton';
+import { apiService } from '@/api/api';
 
 // Conditional import for maps - only import on native platforms
 let MapView: any = null;
@@ -52,13 +53,13 @@ interface SearchResult {
   };
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 export default function OnboardDetailsScreen() {
+  // ALL HOOKS MUST BE CALLED AT THE TOP, BEFORE ANY CONDITIONAL LOGIC
   const navigation = useNavigation();
   const router = useRouter();
-  const { completeUserDetails } = useAuth();
-  
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  // All useState hooks
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -69,10 +70,11 @@ export default function OnboardDetailsScreen() {
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [initialLocationSet, setInitialLocationSet] = useState(false);
-  
+
+  // All useRef hooks
   const mapRef = useRef<any>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
-  
+
   // Default to a major city (Bangalore) but will be updated with current location
   const [mapRegion, setMapRegion] = useState({
     latitude: 12.9716,
@@ -80,15 +82,18 @@ export default function OnboardDetailsScreen() {
     latitudeDelta: 0.05,
     longitudeDelta: 0.05,
   });
-  
-  const [selectedLocation, setSelectedLocation] = useState<{latitude: number; longitude: number} | null>(null);
-  const [userDetails, setUserDetails] = useState<UserDetails>({
+
+  const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userDetails, setUserDetails] = useState<UserDetails | null>({
     name: '',
     email: '',
     alternatePhone: '',
     address: '',
+    latitude: 0,
+    longitude: 0,
   });
 
+  // All useEffect and useLayoutEffect hooks
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
@@ -98,6 +103,17 @@ export default function OnboardDetailsScreen() {
       headerLeft: () => null, // Remove back button
     });
   }, [navigation]);
+
+  useEffect(() => {
+    console.log('user', user);
+    // Don't redirect if still loading
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/(auth)');
+    }
+    if(user?.hasOnboarded){
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   // Initialize with current location on component mount
   useEffect(() => {
@@ -115,50 +131,106 @@ export default function OnboardDetailsScreen() {
     initializeLocation();
   }, []);
 
+  // All useCallback hooks
+  const searchPlaces = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM&components=country:in&types=address`
+      );
+      const data = await response.json();
+
+      if (data.predictions) {
+        setSearchResults(data.predictions);
+        setShowSearchResults(true);
+      }
+    } catch (error) {
+      console.error('Error searching places:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // NOW ALL CONDITIONAL LOGIC AND EARLY RETURNS CAN HAPPEN
+  // Show loading while auth is being determined
+  if (isLoading) {
+    return <LoadingSkeleton />;
+  }
+
   const validateForm = () => {
-    const { name, email, alternatePhone, address } = userDetails;
-    
-    if (!name.trim()) {
+    const { name, email, alternatePhone, address, latitude, longitude } = userDetails || {};
+
+    if (!name?.trim()) {
       Alert.alert('Error', 'Please enter your full name');
       return false;
     }
-    
-    if (!email.trim()) {
+
+    if (!email?.trim()) {
       Alert.alert('Error', 'Please enter your email address');
       return false;
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(email || '')) {
       Alert.alert('Error', 'Please enter a valid email address');
       return false;
     }
-    
-    if (!alternatePhone.trim()) {
+
+    if (!alternatePhone?.trim()) {
       Alert.alert('Error', 'Please enter an alternate phone number');
       return false;
     }
-    
+
     const phoneRegex = /^[6-9]\d{9}$/;
-    if (!phoneRegex.test(alternatePhone)) {
+    if (!phoneRegex.test(alternatePhone || '')) {
       Alert.alert('Error', 'Please enter a valid 10-digit phone number');
       return false;
     }
-    
-    if (!address.trim()) {
+
+    if (!address?.trim()) {
       Alert.alert('Error', 'Please enter your address');
       return false;
     }
-    
+
+    if (!latitude || !longitude || latitude === 0 || longitude === 0) {
+      Alert.alert('Error', 'Please select a location on the map');
+      return false;
+    }
+
     return true;
   };
 
   const requestLocationPermission = async () => {
     try {
+      // First check current permissions
+      const { status: currentStatus } = await Location.getForegroundPermissionsAsync();
+
+      if (currentStatus === 'granted') {
+        return true;
+      }
+
+      // Request permissions if not granted
       const { status } = await Location.requestForegroundPermissionsAsync();
-      return status === 'granted';
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Location permission is required to get your current address. Please enable location access in your device settings.',
+          [{ text: 'OK' }]
+        );
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error('Error requesting location permission:', error);
+      Alert.alert('Error', 'Failed to request location permission');
       return false;
     }
   };
@@ -186,7 +258,7 @@ export default function OnboardDetailsScreen() {
         }
         return;
       }
-      
+
       // For mobile, check permission first
       const { status } = await Location.getForegroundPermissionsAsync();
       if (status === 'granted') {
@@ -206,7 +278,7 @@ export default function OnboardDetailsScreen() {
   const getCurrentLocation = async () => {
     try {
       setLocationLoading(true);
-      
+
       if (Platform.OS === 'web') {
         // For web, use browser geolocation API
         if (navigator.geolocation) {
@@ -230,11 +302,10 @@ export default function OnboardDetailsScreen() {
         }
         return;
       }
-      
+
       // Request permission for mobile
       const hasPermission = await requestLocationPermission();
       if (!hasPermission) {
-        Alert.alert('Permission Denied', 'Location permission is required to get your current address');
         setLocationLoading(false);
         return;
       }
@@ -289,7 +360,7 @@ export default function OnboardDetailsScreen() {
           `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
         );
         const data = await response.json();
-        
+
         if (data.results && data.results.length > 0) {
           const address = data.results[0].formatted_address;
           setUserDetails(prev => ({
@@ -309,7 +380,26 @@ export default function OnboardDetailsScreen() {
           }));
         }
       } else {
-        // Use Expo Location for mobile
+        // For mobile, ensure we have permission before reverse geocoding
+        const { status } = await Location.getForegroundPermissionsAsync();
+
+        if (status !== 'granted') {
+          // Try to request permission again
+          const permissionResult = await Location.requestForegroundPermissionsAsync();
+          if (permissionResult.status !== 'granted') {
+            // If still no permission, use generic address with coordinates
+            const genericAddress = `Selected Location, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+            setUserDetails(prev => ({
+              ...prev,
+              address: genericAddress,
+              latitude,
+              longitude,
+            }));
+            return;
+          }
+        }
+
+        // Use Expo Location for mobile with permission check
         const reverseGeocode = await Location.reverseGeocodeAsync({
           latitude,
           longitude,
@@ -332,52 +422,38 @@ export default function OnboardDetailsScreen() {
             latitude,
             longitude,
           }));
+        } else {
+          // Fallback to generic address if reverse geocoding returns no results
+          const genericAddress = `Selected Location, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          setUserDetails(prev => ({
+            ...prev,
+            address: genericAddress,
+            latitude,
+            longitude,
+          }));
         }
       }
     } catch (error) {
       console.error('Error reverse geocoding:', error);
       // Still update with coordinates even if reverse geocoding fails
+      const genericAddress = `Selected Location, ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
       setUserDetails(prev => ({
         ...prev,
+        address: genericAddress,
         latitude,
         longitude,
       }));
     }
   };
 
-  const searchPlaces = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM&components=country:in&types=address`
-      );
-      const data = await response.json();
-      
-      if (data.predictions) {
-        setSearchResults(data.predictions);
-        setShowSearchResults(true);
-      }
-    } catch (error) {
-      console.error('Error searching places:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
   const handleSearchQueryChange = (text: string) => {
     setSearchQuery(text);
-    
+
     // Clear previous timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    
+
     // Set new timeout for search
     searchTimeoutRef.current = setTimeout(() => {
       searchPlaces(text);
@@ -389,16 +465,16 @@ export default function OnboardDetailsScreen() {
       setSearchQuery(result.description);
       setShowSearchResults(false);
       Keyboard.dismiss();
-      
+
       // Get place details
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=geometry,formatted_address&key=AIzaSyDBFyJk1ZsnnqxLC43WT_-OSCFZaG0OaNM`
       );
       const data = await response.json();
-      
+
       if (data.result?.geometry?.location) {
         const { lat, lng } = data.result.geometry.location;
-        
+
         // Update address immediately with the formatted address from search
         setUserDetails(prev => ({
           ...prev,
@@ -406,7 +482,7 @@ export default function OnboardDetailsScreen() {
           latitude: lat,
           longitude: lng,
         }));
-        
+
         // Update map region
         const newRegion = {
           latitude: lat,
@@ -417,7 +493,7 @@ export default function OnboardDetailsScreen() {
         setMapRegion(newRegion);
         setSelectedLocation({ latitude: lat, longitude: lng });
         setLocationSelected(true);
-        
+
         // Animate map to new location if map is visible
         if (mapRef.current && showMap && Platform.OS !== 'web') {
           mapRef.current.animateToRegion(newRegion, 1000);
@@ -428,7 +504,7 @@ export default function OnboardDetailsScreen() {
     }
   };
 
-  const openMapPicker = () => {
+  const openMapPicker = async () => {
     if (Platform.OS === 'web') {
       Alert.alert(
         'Map Picker',
@@ -437,7 +513,13 @@ export default function OnboardDetailsScreen() {
       );
       return;
     }
-    
+
+    // Check permission before opening map
+    const hasPermission = await requestLocationPermission();
+    if (!hasPermission) {
+      return;
+    }
+
     setShowMap(true);
     setSearchQuery('');
     setShowSearchResults(false);
@@ -445,7 +527,7 @@ export default function OnboardDetailsScreen() {
 
   const handleMapPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
-    
+
     // Smooth animation to selected location
     const newRegion = {
       latitude,
@@ -453,15 +535,15 @@ export default function OnboardDetailsScreen() {
       latitudeDelta: 0.01,
       longitudeDelta: 0.01,
     };
-    
+
     setSelectedLocation({ latitude, longitude });
     setLocationSelected(true);
-    
+
     // Animate map smoothly
     if (mapRef.current) {
       mapRef.current.animateToRegion(newRegion, 500);
     }
-    
+
     // Update address
     await reverseGeocode(latitude, longitude);
   };
@@ -478,15 +560,17 @@ export default function OnboardDetailsScreen() {
     if (!validateForm()) return;
 
     setLoading(true);
+    console.log('userDetails', userDetails);
     try {
-      const result = await completeUserDetails(userDetails);
-      
+      const result = await apiService.post('/auth/onboard', userDetails);
+
       if (result.success) {
         Alert.alert(
           'Welcome to AquaHome!',
           'Your profile has been completed successfully. You can now enjoy our services.',
           [{ text: 'Get Started', onPress: () => router.replace('/(tabs)') }]
         );
+        router.replace('/(tabs)');
       } else {
         Alert.alert('Error', result.error || 'Failed to update profile');
       }
@@ -516,7 +600,7 @@ export default function OnboardDetailsScreen() {
         <View style={styles.loadingContainer}>
           <LoadingSkeleton width="80%" height={32} style={styles.loadingTitle} />
           <LoadingSkeleton width="90%" height={20} style={styles.loadingSubtitle} />
-          
+
           <View style={styles.loadingForm}>
             {[1, 2, 3, 4].map((_, index) => (
               <View key={index} style={styles.loadingField}>
@@ -525,7 +609,7 @@ export default function OnboardDetailsScreen() {
               </View>
             ))}
           </View>
-          
+
           <LoadingSkeleton width="100%" height={56} borderRadius={28} style={styles.loadingButton} />
         </View>
       </SafeAreaView>
@@ -550,7 +634,7 @@ export default function OnboardDetailsScreen() {
               </View>
             </View>
           </View>
-          
+
           {/* Map */}
           <MapView
             ref={mapRef}
@@ -574,7 +658,7 @@ export default function OnboardDetailsScreen() {
               />
             )}
           </MapView>
-          
+
           {selectedLocation && (
             <View style={styles.selectedLocationInfo}>
               <Text style={styles.selectedLocationText}>
@@ -585,7 +669,7 @@ export default function OnboardDetailsScreen() {
               </Text>
             </View>
           )}
-          
+
           <View style={styles.mapActions}>
             <TouchableOpacity
               style={styles.mapCancelButton}
@@ -593,7 +677,7 @@ export default function OnboardDetailsScreen() {
             >
               <Text style={styles.mapCancelText}>Cancel</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.mapConfirmButton, !selectedLocation && styles.mapConfirmButtonDisabled]}
               onPress={confirmMapSelection}
@@ -672,20 +756,8 @@ export default function OnboardDetailsScreen() {
               <View style={styles.addressContainer}>
                 {/* Search Bar for Address */}
                 <View style={styles.addressSearchContainer}>
-                  <View style={styles.addressSearchBar}>
-                    <Search size={20} color="#687b82" />
-                    <TextInput
-                      style={styles.addressSearchInput}
-                      placeholder="Search for your address..."
-                      placeholderTextColor="#687b82"
-                      value={searchQuery}
-                      onChangeText={handleSearchQueryChange}
-                    />
-                    {isSearching && (
-                      <ActivityIndicator size="small" color="#4fa3c4" />
-                    )}
-                  </View>
-                  
+
+
                   {/* Search Results */}
                   {showSearchResults && searchResults.length > 0 && (
                     <View style={styles.addressSearchResults}>
@@ -718,7 +790,7 @@ export default function OnboardDetailsScreen() {
                     </View>
                   )}
                 </View>
-                
+
                 <View style={styles.locationButtons}>
                   <TouchableOpacity
                     style={[styles.locationButton, styles.currentLocationButton]}
@@ -734,7 +806,7 @@ export default function OnboardDetailsScreen() {
                       </>
                     )}
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={[styles.locationButton, styles.mapPickerButton]}
                     onPress={openMapPicker}
@@ -793,7 +865,6 @@ export default function OnboardDetailsScreen() {
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
