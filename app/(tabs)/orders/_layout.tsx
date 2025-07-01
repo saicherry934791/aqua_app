@@ -34,6 +34,7 @@ const _layout = () => {
     return (
         <Tab.Navigator
             screenOptions={{
+                swipeEnabled: false,
                 tabBarScrollEnabled: true,
                 tabBarActiveTintColor: '#121517', // active tab text color
                 tabBarInactiveTintColor: '#121517', // inactive tab text color

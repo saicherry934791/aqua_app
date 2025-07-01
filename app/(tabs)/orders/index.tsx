@@ -288,7 +288,7 @@ export default function OrdersScreen() {
                                     fontFamily: 'SpaceGrotesk_700Bold',
                                     color: '#4fa3c4'
                                 }}>
-                                    ₹{order.total.toLocaleString()}
+                                    ₹{order?.total?.toLocaleString()}
                                 </Text>
                                 <Text style={{ 
                                     fontSize: 14, 
