@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     title: {
         color: '#111618',
         fontSize: 28,
-        fontFamily: 'SpaceGrotesk_700Bold',
+        fontFamily: 'Outfit_700Bold',
         textAlign: 'left',
         paddingBottom: 12,
         paddingTop: 20,
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     description: {
         color: '#111618',
         fontSize: 18,
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
         paddingBottom: 12,
         paddingTop: 4,
         lineHeight: 24,
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
         width: 48,
         borderRadius: 12,
         fontSize: 18,
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
         color: '#111618',
     },
     emptyInput: {
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#111618',
         fontSize: 18,
-        fontFamily: 'SpaceGrotesk_700Bold',
+        fontFamily: 'Outfit_700Bold',
     },
     didntReceiveText: {
         color: '#607e8a',
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         paddingBottom: 12,
         paddingTop: 4,
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
     },
     resendContainer: {
         alignItems: 'center',
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
         color: '#607e8a',
         fontSize: 16,
         textDecorationLine: 'underline',
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
     },
     helpContainer: {
         alignItems: 'center',
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
         color: '#4fa3c4',
         fontSize: 14,
         textAlign: 'center',
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
         backgroundColor: '#e8f4f8',
         paddingHorizontal: 16,
         paddingVertical: 8,

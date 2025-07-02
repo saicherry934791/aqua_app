@@ -100,9 +100,9 @@ const ProductsScreen = () => {
                   <Text className="text-[#111618] font-grotesk-bold text-lg mb-1">
                     {product.name}
                   </Text>
-                  <Text className="text-[#607e8a] font-grotesk text-sm mb-2">
+                  {/* <Text className="text-[#607e8a] font-grotesk text-sm mb-2">
                     {product.description}
-                  </Text>
+                  </Text> */}
                   <Text className="text-[#4fa3c4] font-grotesk-bold text-lg">
                     ₹{product.rentPrice}
                   </Text>

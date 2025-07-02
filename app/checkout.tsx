@@ -79,7 +79,7 @@ function CheckoutScreen() {
         setItems(data.items);
         setTotal(data.total);
       } catch (error) {
-        console.error('Error parsing checkout data:', error);
+        console.log('Error parsing checkout data:', error);
         Alert.alert('Error', 'Invalid checkout data');
         router.back();
       }
@@ -101,7 +101,7 @@ function CheckoutScreen() {
         }));
         setLocationSelected(true);
       } catch (error) {
-        console.error('Error parsing location data:', error);
+        console.log('Error parsing location data:', error);
         Alert.alert('Error', 'Failed to parse location data');
       }
     }
@@ -110,7 +110,7 @@ function CheckoutScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ fontSize: 20, fontFamily: 'SpaceGrotesk_700Bold', color: '#121516' }}>
+        <Text style={{ fontSize: 20, fontFamily: 'Outfit_700Bold', color: '#121516' }}>
           CHECKOUT
         </Text>
       ),
@@ -164,7 +164,7 @@ function CheckoutScreen() {
               Alert.alert('Success', 'Current location detected!');
             },
             (error) => {
-              console.error('Geolocation error:', error);
+              console.log('Geolocation error:', error);
               setLocationLoading(false);
               Alert.alert('Location Error', 'Failed to get current location. Please use map picker instead.');
             },
@@ -180,7 +180,7 @@ function CheckoutScreen() {
         setLocationLoading(false);
       }
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.log('Error getting location:', error);
       Alert.alert('Error', 'Failed to get current location. Please use map picker.');
       setLocationLoading(false);
     }
@@ -209,7 +209,7 @@ function CheckoutScreen() {
         throw new Error('No address found for the coordinates');
       }
     } catch (error) {
-      console.error('Error reverse geocoding:', error);
+      console.log('Error reverse geocoding:', error);
       Alert.alert('Error', 'Failed to get address for the selected location');
     }
   };
@@ -219,8 +219,8 @@ function CheckoutScreen() {
       pathname: '/map-picker',
       params: {
         returnTo: '/checkout',
-        currentLatitude: shippingInfo.location.latitude?.toString() || '',
-        currentLongitude: shippingInfo.location.longitude?.toString() || '',
+        currentLatitude: shippingInfo.latitude?.toString() || '',
+        currentLongitude: shippingInfo.longitude?.toString() || '',
         currentAddress: '',
       },
     });
@@ -339,7 +339,7 @@ function CheckoutScreen() {
       }
 
     } catch (error) {
-      console.error('Payment process error:', error);
+      console.log('Payment process error:', error);
       Alert.alert(
         'Payment Failed',
         error.message || 'There was an error processing your payment. Please try again.'
@@ -379,7 +379,7 @@ function CheckoutScreen() {
           }}>
             <Text style={{
               fontSize: 20,
-              fontFamily: 'SpaceGrotesk_700Bold',
+              fontFamily: 'Outfit_700Bold',
               color: '#121516',
               marginBottom: 16,
             }}>
@@ -396,14 +396,14 @@ function CheckoutScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{
                     fontSize: 16,
-                    fontFamily: 'SpaceGrotesk_600SemiBold',
+                    fontFamily: 'Outfit_600SemiBold',
                     color: '#121516',
                   }}>
                     {item.name}
                   </Text>
                   <Text style={{
                     fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_400Regular',
+                    fontFamily: 'Outfit_400Regular',
                     color: '#687b82',
                     marginTop: 2,
                   }}>
@@ -412,7 +412,7 @@ function CheckoutScreen() {
                 </View>
                 <Text style={{
                   fontSize: 18,
-                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontFamily: 'Outfit_700Bold',
                   color: '#121516',
                 }}>
                   ₹{(item.price * item.quantity).toLocaleString()}
@@ -433,14 +433,14 @@ function CheckoutScreen() {
               }}>
                 <Text style={{
                   fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_400Regular',
+                  fontFamily: 'Outfit_400Regular',
                   color: '#687b82',
                 }}>
                   Subtotal
                 </Text>
                 <Text style={{
                   fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
+                  fontFamily: 'Outfit_600SemiBold',
                   color: '#121516',
                 }}>
                   ₹{total.toLocaleString()}
@@ -454,14 +454,14 @@ function CheckoutScreen() {
               }}>
                 <Text style={{
                   fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_400Regular',
+                  fontFamily: 'Outfit_400Regular',
                   color: '#687b82',
                 }}>
                   Delivery Fee {total > 500 && '(Free above ₹500)'}
                 </Text>
                 <Text style={{
                   fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
+                  fontFamily: 'Outfit_600SemiBold',
                   color: deliveryFee === 0 ? '#4fa3c4' : '#121516',
                 }}>
                   {deliveryFee === 0 ? 'Free' : `₹${deliveryFee}`}
@@ -477,14 +477,14 @@ function CheckoutScreen() {
               }}>
                 <Text style={{
                   fontSize: 20,
-                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontFamily: 'Outfit_700Bold',
                   color: '#121516',
                 }}>
                   Total
                 </Text>
                 <Text style={{
                   fontSize: 20,
-                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontFamily: 'Outfit_700Bold',
                   color: '#4fa3c4',
                 }}>
                   ₹{finalTotal.toLocaleString()}
@@ -497,7 +497,7 @@ function CheckoutScreen() {
           <View style={{ paddingHorizontal: 16, marginBottom: 24 }}>
             <Text style={{
               fontSize: 20,
-              fontFamily: 'SpaceGrotesk_700Bold',
+              fontFamily: 'Outfit_700Bold',
               color: '#121516',
               marginBottom: 20,
             }}>
@@ -508,7 +508,7 @@ function CheckoutScreen() {
             <View style={{ marginBottom: 14 }}>
               <Text style={{
                 fontSize: 14,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
+                fontFamily: 'Outfit_600SemiBold',
                 color: '#121516',
                 marginBottom: 6,
               }}>
@@ -534,7 +534,7 @@ function CheckoutScreen() {
                     flex: 1,
                     marginLeft: 8,
                     fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_400Regular',
+                    fontFamily: 'Outfit_400Regular',
                     color: '#121516',
                   }}
                 />
@@ -545,7 +545,7 @@ function CheckoutScreen() {
             <View style={{ marginBottom: 14 }}>
               <Text style={{
                 fontSize: 14,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
+                fontFamily: 'Outfit_600SemiBold',
                 color: '#121516',
                 marginBottom: 6,
               }}>
@@ -564,7 +564,7 @@ function CheckoutScreen() {
                 <Phone size={16} color="#687b82" />
                 <Text style={{
                   fontSize: 14,
-                  fontFamily: 'SpaceGrotesk_600SemiBold',
+                  fontFamily: 'Outfit_600SemiBold',
                   color: '#121516',
                   marginLeft: 8,
                   marginRight: 4,
@@ -581,7 +581,7 @@ function CheckoutScreen() {
                   style={{
                     flex: 1,
                     fontSize: 14,
-                    fontFamily: 'SpaceGrotesk_400Regular',
+                    fontFamily: 'Outfit_400Regular',
                     color: '#121516',
                   }}
                 />
@@ -592,7 +592,7 @@ function CheckoutScreen() {
             <View style={{ marginBottom: 20 }}>
               <Text style={{
                 fontSize: 14,
-                fontFamily: 'SpaceGrotesk_600SemiBold',
+                fontFamily: 'Outfit_600SemiBold',
                 color: '#121516',
                 marginBottom: 6,
               }}>
@@ -620,7 +620,7 @@ function CheckoutScreen() {
                       <>
                         <Text style={{
                           fontSize: 14,
-                          fontFamily: 'SpaceGrotesk_400Regular',
+                          fontFamily: 'Outfit_400Regular',
                           color: '#121516',
                           lineHeight: 18,
                         }}>
@@ -629,7 +629,7 @@ function CheckoutScreen() {
                         {shippingInfo.latitude && shippingInfo.longitude && (
                           <Text style={{
                             fontSize: 11,
-                            fontFamily: 'SpaceGrotesk_400Regular',
+                            fontFamily: 'Outfit_400Regular',
                             color: '#687b82',
                             marginTop: 4,
                           }}>
@@ -640,7 +640,7 @@ function CheckoutScreen() {
                     ) : (
                       <Text style={{
                         fontSize: 14,
-                        fontFamily: 'SpaceGrotesk_400Regular',
+                        fontFamily: 'Outfit_400Regular',
                         color: '#ff6b6b',
                         fontStyle: 'italic',
                       }}>
@@ -686,7 +686,7 @@ function CheckoutScreen() {
                         <Navigation size={14} color="#4fa3c4" />
                         <Text style={{
                           fontSize: 12,
-                          fontFamily: 'SpaceGrotesk_600SemiBold',
+                          fontFamily: 'Outfit_600SemiBold',
                           color: '#4fa3c4',
                           marginLeft: 4,
                         }}>
@@ -712,7 +712,7 @@ function CheckoutScreen() {
                     <MapPin size={14} color="#ff9800" />
                     <Text style={{
                       fontSize: 12,
-                      fontFamily: 'SpaceGrotesk_600SemiBold',
+                      fontFamily: 'Outfit_600SemiBold',
                       color: '#ff9800',
                       marginLeft: 4,
                     }}>
@@ -725,7 +725,7 @@ function CheckoutScreen() {
               {/* Helper Text */}
               <Text style={{
                 fontSize: 11,
-                fontFamily: 'SpaceGrotesk_400Regular',
+                fontFamily: 'Outfit_400Regular',
                 color: locationSelected ? '#4fa3c4' : '#ff6b6b',
                 marginTop: 6,
                 textAlign: 'center',
@@ -779,7 +779,7 @@ function CheckoutScreen() {
                 <ActivityIndicator color="white" size="small" />
                 <Text style={{
                   fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontFamily: 'Outfit_700Bold',
                   color: 'white',
                   marginLeft: 8,
                 }}>
@@ -791,7 +791,7 @@ function CheckoutScreen() {
                 <CreditCard size={20} color="white" />
                 <Text style={{
                   fontSize: 16,
-                  fontFamily: 'SpaceGrotesk_700Bold',
+                  fontFamily: 'Outfit_700Bold',
                   color: 'white',
                   marginLeft: 8,
                 }}>
@@ -803,7 +803,7 @@ function CheckoutScreen() {
 
           <Text style={{
             fontSize: 10,
-            fontFamily: 'SpaceGrotesk_400Regular',
+            fontFamily: 'Outfit_400Regular',
             color: '#687b82',
             textAlign: 'center',
             marginTop: 4,

@@ -1,7 +1,8 @@
 import { apiService } from '@/api/api';
 import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation, useRouter } from 'expo-router';
-import { Search } from 'lucide-react-native';
+import { Search, MapPin, Clock, Bell } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
 import {
   Image,
@@ -9,8 +10,11 @@ import {
   ScrollView,
   Text,
   TouchableOpacity,
-  View
+  View,
+  Dimensions
 } from 'react-native';
+
+const { width } = Dimensions.get('window');
 
 const AquaHomeApp = () => {
   const navigation = useNavigation();
@@ -18,8 +22,10 @@ const AquaHomeApp = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const { user } = useAuth();
 
   useLayoutEffect(() => {
+    console.log('user in homescreen ', user);
     navigation.setOptions({
       headerTitle: () => (
         <Text className="text-2xl font-grotesk-bold text-[#121516]">AQUA HOME</Text>
@@ -38,26 +44,11 @@ const AquaHomeApp = () => {
 
       const response = await apiService.get('/homescreen');
 
-      if(response.success){
-        console.log('data homescreen is ',response.data)
-        setProducts(response.data.popularProducts)
-        setOrders(response.data.recentOrders)
-        
-
+      if (response.success) {
+        console.log('data homescreen is ', response.data);
+        setProducts(response.data.popularProducts);
+        setOrders(response.data.recentOrders);
       }
-
-      // const [productsResponse, ordersResponse] = await Promise.all([
-      //   mockApiService.getProducts(),
-      //   mockApiService.getOrders('1'),
-      // ]);
-
-      // if (productsResponse.success) {
-      //   setProducts(productsResponse.data.slice(0, 3)); // Show only first 3 products
-      // }
-
-      // if (ordersResponse.success) {
-      //   setOrders(ordersResponse.data.slice(0, 2)); // Show only recent orders
-      // }
     } catch (error) {
       console.log('Error loading home data:', error);
     } finally {
@@ -65,16 +56,58 @@ const AquaHomeApp = () => {
     }
   };
 
+  // Component for location not available
+  const LocationNotAvailable = () => (
+    <View className="flex-1 bg-white items-center justify-center px-4">
+      <View className="bg-[#e8f4f8] rounded-2xl p-6 items-center w-full">
+        <View className="w-20 h-20 bg-[#4fa3c4] rounded-full items-center justify-center mb-4">
+          <MapPin size={40} color="white" />
+        </View>
+
+        <Text className="text-2xl font-grotesk-bold text-[#121516] text-center mb-2">
+          We're Coming Soon!
+        </Text>
+
+        <Text className="text-base text-[#6a7a81] font-grotesk-medium text-center mb-6 leading-relaxed">
+          AquaHome services aren't available in your area yet, but we're working hard to expand our reach.
+        </Text>
+
+        <View className="bg-white rounded-xl p-4 w-full mb-6">
+          <View className="flex-row items-center mb-2">
+            <MapPin size={16} color="#4fa3c4" />
+            <Text className="text-sm text-[#4fa3c4] font-grotesk-medium ml-2">
+              Current Location
+            </Text>
+          </View>
+          <Text className="text-base text-[#121516] font-grotesk-medium">
+            {user?.address || 'Chennai, Tamil Nadu'}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+
+
   if (loading) {
     return <HomeSkeleton />;
   }
 
+  // Check if user has no franchise area assigned
+  if (!user?.franchiseAreaId) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <LocationNotAvailable />
+      </SafeAreaView>
+    );
+  }
+
+  // Regular home screen for users with franchise area
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Search Bar */}
         <View className="px-4 py-3">
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/(tabs)/products')}
             className="flex-row h-14 bg-[#f1f3f4] rounded-xl items-center"
           >
@@ -112,9 +145,9 @@ const AquaHomeApp = () => {
                 <Text className="text-xl font-grotesk-bold text-[#121516]">
                   {product.name}
                 </Text>
-                <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
+                {/* <Text className="text-sm text-[#6a7a81] font-grotesk-medium">
                   {product.description}
-                </Text>
+                </Text> */}
                 <Text className="text-lg font-grotesk-bold text-[#4fa3c4] mt-2">
                   ₹{product.price.toLocaleString()}
                 </Text>

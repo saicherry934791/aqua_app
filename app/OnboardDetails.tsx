@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#121516',
   },
   scrollView: {
@@ -910,14 +910,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#121516',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
     textAlign: 'center',
     lineHeight: 24,
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#121516',
   },
   inputWrapper: {
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#121516',
   },
   addressContainer: {
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   addressSearchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#121516',
   },
   addressSearchResults: {
@@ -1024,7 +1024,7 @@ const styles = StyleSheet.create({
   },
   locationButtonText: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#4fa3c4',
   },
   benefitsContainer: {
@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   benefitsTitle: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#121516',
     marginBottom: 16,
     textAlign: 'center',
@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
   benefitText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
   },
   footer: {
@@ -1076,7 +1076,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     fontSize: 18,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: 'white',
   },
   // Map styles
@@ -1104,13 +1104,13 @@ const styles = StyleSheet.create({
   },
   mapTitle: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#121516',
     marginBottom: 4,
   },
   mapSubtitle: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
   },
   map: {
@@ -1132,14 +1132,14 @@ const styles = StyleSheet.create({
   },
   selectedLocationText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
     color: '#121516',
     textAlign: 'center',
     marginBottom: 4,
   },
   coordinatesText: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
     textAlign: 'center',
   },
@@ -1160,7 +1160,7 @@ const styles = StyleSheet.create({
   },
   mapCancelText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
     color: '#687b82',
   },
   mapConfirmButton: {
@@ -1175,7 +1175,7 @@ const styles = StyleSheet.create({
   },
   mapConfirmText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
     color: 'white',
   },
   searchResultItem: {
@@ -1194,13 +1194,13 @@ const styles = StyleSheet.create({
   },
   searchResultMain: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#121516',
     marginBottom: 2,
   },
   searchResultSecondary: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
   },
 });

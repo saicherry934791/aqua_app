@@ -187,7 +187,7 @@ export default function AquaHomeProductScreen() {
     useLayoutEffect(() => {
         navigation.setOptions({
             headerTitle: () => (
-                <Text style={{ fontSize: 20, fontFamily: 'SpaceGrotesk_700Bold', color: '#121516' }}>
+                <Text style={{ fontSize: 20, fontFamily: 'Outfit_700Bold', color: '#121516' }}>
                     PRODUCT DETAILS
                 </Text>
             ),
@@ -218,7 +218,7 @@ export default function AquaHomeProductScreen() {
     if (error && !loading) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                <Text style={{ fontSize: 18, fontFamily: 'SpaceGrotesk_600SemiBold', color: '#e74c3c', textAlign: 'center', marginBottom: 20 }}>
+                <Text style={{ fontSize: 18, fontFamily: 'Outfit_600SemiBold', color: '#e74c3c', textAlign: 'center', marginBottom: 20 }}>
                     {error}
                 </Text>
                 <TouchableOpacity
@@ -230,7 +230,7 @@ export default function AquaHomeProductScreen() {
                         borderRadius: 8,
                     }}
                 >
-                    <Text style={{ color: 'white', fontFamily: 'SpaceGrotesk_600SemiBold' }}>
+                    <Text style={{ color: 'white', fontFamily: 'Outfit_600SemiBold' }}>
                         Retry
                     </Text>
                 </TouchableOpacity>
@@ -245,7 +245,7 @@ export default function AquaHomeProductScreen() {
                 refreshing={refreshing}
                 onRefresh={onRefresh}
                 skeleton={<ProductSkeleton />}
-                style={{ paddingBottom: 120 }}
+                style={{ paddingBottom: 120,backgroundColor:'white' }}
             >
                 {product && (
                     <>
@@ -300,7 +300,7 @@ export default function AquaHomeProductScreen() {
                             {/* Title */}
                             <Text style={{
                                 fontSize: 28,
-                                fontFamily: 'SpaceGrotesk_700Bold',
+                                fontFamily: 'Outfit_700Bold',
                                 color: '#121516',
                                 marginBottom: 16,
                             }}>
@@ -312,7 +312,7 @@ export default function AquaHomeProductScreen() {
                                 <View style={{ marginBottom: 24 }}>
                                     <Text style={{
                                         fontSize: 20,
-                                        fontFamily: 'SpaceGrotesk_700Bold',
+                                        fontFamily: 'Outfit_700Bold',
                                         color: '#121516',
                                         marginBottom: 16,
                                     }}>
@@ -337,7 +337,7 @@ export default function AquaHomeProductScreen() {
                                             >
                                                 <Text style={{
                                                     fontSize: 16,
-                                                    fontFamily: 'SpaceGrotesk_700Bold',
+                                                    fontFamily: 'Outfit_700Bold',
                                                     textAlign: 'center',
                                                     color: selectedOption === 'product' ? '#4fa3c4' : '#687b82',
                                                 }}>
@@ -345,7 +345,7 @@ export default function AquaHomeProductScreen() {
                                                 </Text>
                                                 <Text style={{
                                                     fontSize: 20,
-                                                    fontFamily: 'SpaceGrotesk_700Bold',
+                                                    fontFamily: 'Outfit_700Bold',
                                                     textAlign: 'center',
                                                     color: '#121516',
                                                     marginTop: 4,
@@ -354,7 +354,7 @@ export default function AquaHomeProductScreen() {
                                                 </Text>
                                                 <Text style={{
                                                     fontSize: 12,
-                                                    fontFamily: 'SpaceGrotesk_400Regular',
+                                                    fontFamily: 'Outfit_400Regular',
                                                     textAlign: 'center',
                                                     color: '#687b82',
                                                 }}>
@@ -380,7 +380,7 @@ export default function AquaHomeProductScreen() {
                                             >
                                                 <Text style={{
                                                     fontSize: 16,
-                                                    fontFamily: 'SpaceGrotesk_700Bold',
+                                                    fontFamily: 'Outfit_700Bold',
                                                     textAlign: 'center',
                                                     color: selectedOption === 'subscription' ? '#4fa3c4' : '#687b82',
                                                 }}>
@@ -388,7 +388,7 @@ export default function AquaHomeProductScreen() {
                                                 </Text>
                                                 <Text style={{
                                                     fontSize: 20,
-                                                    fontFamily: 'SpaceGrotesk_700Bold',
+                                                    fontFamily: 'Outfit_700Bold',
                                                     textAlign: 'center',
                                                     color: '#121516',
                                                     marginTop: 4,
@@ -397,7 +397,7 @@ export default function AquaHomeProductScreen() {
                                                 </Text>
                                                 <Text style={{
                                                     fontSize: 12,
-                                                    fontFamily: 'SpaceGrotesk_400Regular',
+                                                    fontFamily: 'Outfit_400Regular',
                                                     textAlign: 'center',
                                                     color: '#687b82',
                                                 }}>
@@ -406,7 +406,7 @@ export default function AquaHomeProductScreen() {
                                                 {product.deposit > 0 && (
                                                     <Text style={{
                                                         fontSize: 10,
-                                                        fontFamily: 'SpaceGrotesk_400Regular',
+                                                        fontFamily: 'Outfit_400Regular',
                                                         textAlign: 'center',
                                                         color: '#687b82',
                                                         marginTop: 2,
@@ -423,7 +423,7 @@ export default function AquaHomeProductScreen() {
                             {/* Description */}
                             <Text style={{
                                 fontSize: 16,
-                                fontFamily: 'SpaceGrotesk_400Regular',
+                                fontFamily: 'Outfit_400Regular',
                                 color: '#121516',
                                 lineHeight: 24,
                                 marginBottom: 32,
@@ -432,17 +432,22 @@ export default function AquaHomeProductScreen() {
                             </Text>
 
                             {/* Key Features */}
-                            {product.productFeatures?.length > 0 && (
+                            {[0,1]?.length > 0 && (
                                 <>
                                     <Text style={{
                                         fontSize: 20,
-                                        fontFamily: 'SpaceGrotesk_700Bold',
+                                        fontFamily: 'Outfit_700Bold',
                                         color: '#121516',
                                         marginBottom: 16,
                                     }}>
                                         Key Features
                                     </Text>
-                                    {product.productFeatures.map((feature, index) => (
+                                    {[
+                            ["Filtration Technology dddd", "Multi-stage filtration fdjbfud  fff ffff dfhboduhfd dhfduhoffdifjdof"],
+                            ["Capacity", "10 liters"],
+                            ["Dimensions", "30cm x 20cm x 40cm"],
+                            ["Warranty", "2 years"],
+                        ].map((feature, index) => (
                                         <View key={feature.id} style={{
                                             paddingVertical: 20,
                                             borderTopWidth: 1,
@@ -452,18 +457,18 @@ export default function AquaHomeProductScreen() {
                                                 <Text style={{
                                                     fontSize: 16,
                                                     width: '50%',
-                                                    fontFamily: 'SpaceGrotesk_400Regular',
+                                                    fontFamily: 'Outfit_400Regular',
                                                     color: '#6a7a81',
                                                 }}>
-                                                    {feature.name}
+                                                    {feature[0]}
                                                 </Text>
                                                 <Text style={{
                                                     fontSize: 16,
                                                     width: '50%',
-                                                    fontFamily: 'SpaceGrotesk_500Medium',
+                                                    fontFamily: 'Outfit_500Medium',
                                                     color: '#121516',
                                                 }}>
-                                                    {feature.value}
+                                                    {feature[1]}
                                                 </Text>
                                             </View>
                                         </View>
@@ -503,7 +508,7 @@ export default function AquaHomeProductScreen() {
                             <ShoppingCart size={20} color="white" />
                             <Text style={{
                                 fontSize: 18,
-                                fontFamily: 'SpaceGrotesk_700Bold',
+                                fontFamily: 'Outfit_700Bold',
                                 color: 'white',
                                 marginLeft: 8,
                             }}>

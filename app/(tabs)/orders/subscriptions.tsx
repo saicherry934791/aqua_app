@@ -28,7 +28,7 @@ const subscriptions = () => {
         try {
             setError(null);
             const response = await apiService.get('/rentals/my-rentals');
-            
+            console.log('response.success rentals  ',response)
             if (response.success) {
                 setSubscriptions(response.data.rentals || []);
             } else {

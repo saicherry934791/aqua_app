@@ -3,16 +3,16 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { Check, MapPin, Search, X } from 'lucide-react-native';
 import React, { useLayoutEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Keyboard,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Keyboard,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface SearchResult {
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#121516',
   },
   content: {
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
   instructionsText: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#4fa3c4',
     textAlign: 'center',
   },
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#121516',
   },
   searchResultsContainer: {
@@ -316,13 +316,13 @@ const styles = StyleSheet.create({
   },
   searchResultMain: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#121516',
     marginBottom: 2,
   },
   searchResultSecondary: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
   },
   mapPlaceholder: {
@@ -342,14 +342,14 @@ const styles = StyleSheet.create({
   },
   mapPlaceholderTitle: {
     fontSize: 20,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#121516',
     marginTop: 16,
     marginBottom: 8,
   },
   mapPlaceholderSubtitle: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
     textAlign: 'center',
     lineHeight: 24,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   },
   webNote: {
     fontSize: 14,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#4fa3c4',
     backgroundColor: '#e8f4f8',
     paddingHorizontal: 12,
@@ -379,20 +379,20 @@ const styles = StyleSheet.create({
   },
   selectedLocationTitle: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     color: '#4fa3c4',
     marginLeft: 8,
   },
   selectedLocationAddress: {
     fontSize: 15,
-    fontFamily: 'SpaceGrotesk_500Medium',
+    fontFamily: 'Outfit_500Medium',
     color: '#121516',
     lineHeight: 20,
     marginBottom: 6,
   },
   coordinatesText: {
     fontSize: 12,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
     color: '#687b82',
   },
   actionButtons: {
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
     color: '#687b82',
     marginLeft: 6,
   },
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
     color: 'white',
     marginLeft: 6,
   },

@@ -1,18 +1,18 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigation, useRouter } from 'expo-router';
 import React, { useLayoutEffect } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Animated, {
-  useSharedValue,
-  useAnimatedScrollHandler,
-  useAnimatedRef,
-  useAnimatedStyle,
-  interpolate,
   Extrapolation,
+  interpolate,
+  useAnimatedRef,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRouter } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
 
 const data = [
   {
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     marginBottom: 16,
     color: '#121516',
-    fontFamily: 'SpaceGrotesk_700Bold',
+    fontFamily: 'Outfit_700Bold',
     lineHeight: 38,
   },
   itemText: {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     color: '#687b82',
     lineHeight: 24,
     fontSize: 16,
-    fontFamily: 'SpaceGrotesk_400Regular',
+    fontFamily: 'Outfit_400Regular',
   },
   bottomContainer: {
     flexDirection: 'row',
@@ -321,6 +321,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     position: 'absolute',
-    fontFamily: 'SpaceGrotesk_600SemiBold',
+    fontFamily: 'Outfit_600SemiBold',
   },
 });

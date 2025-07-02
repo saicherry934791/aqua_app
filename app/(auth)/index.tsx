@@ -1,16 +1,16 @@
+import { CustomerType, useAuth } from '@/contexts/AuthContext';
+import { useNavigation, useRouter } from 'expo-router';
+import React, { useLayoutEffect, useState } from 'react';
 import {
-    View,
+    ActivityIndicator,
+    Alert,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    Alert,
-    ActivityIndicator,
+    View,
 } from 'react-native';
-import React, { useLayoutEffect, useState } from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { useNavigation, useRouter } from 'expo-router';
-import { useAuth, CustomerType } from '@/contexts/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const Login = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
         textAlign: 'left',
         paddingBottom: 12,
         paddingTop: 20,
-        fontFamily: 'SpaceGrotesk_700Bold',
+        fontFamily: 'Outfit_700Bold',
     },
     inputContainer: {
         paddingVertical: 12,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     label: {
         color: '#111618',
         fontSize: 18,
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
         paddingBottom: 8,
     },
     phoneInputWrapper: {
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     countryCode: {
         color: '#111618',
         fontSize: 18,
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
         marginRight: 8,
     },
     phoneInput: {
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
         color: '#111618',
         fontSize: 18,
         height: '100%',
-        fontFamily: 'SpaceGrotesk_500Medium',
+        fontFamily: 'Outfit_500Medium',
     },
     otpButton: {
         height: 48,
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#111618',
         fontSize: 16,
-        fontFamily: 'SpaceGrotesk_700Bold',
+        fontFamily: 'Outfit_700Bold',
     },
     helpContainer: {
         alignItems: 'center',
@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
         color: '#607e8a',
         fontSize: 14,
         textAlign: 'center',
-        fontFamily: 'SpaceGrotesk_400Regular',
+        fontFamily: 'Outfit_400Regular',
         lineHeight: 20,
     },
 });

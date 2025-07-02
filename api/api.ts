@@ -2,7 +2,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BASE_URL = 'http://192.168.31.180:3000/api';
+const BASE_URL = 'http://192.168.73.216:3000/api';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -90,7 +90,7 @@ class ApiService {
       throw new Error('No refresh token available');
     }
 
-    const response = await axios.post(`${BASE_URL}/auth/refresh`, {
+    const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
       refreshToken,
     });
 

@@ -1,11 +1,10 @@
-import { View, Text, Platform } from 'react-native'
-import React, { useEffect, useLayoutEffect } from 'react'
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
+import React, { useEffect, useLayoutEffect } from 'react';
+import { Text } from 'react-native';
 import OrdersScreen from './index';
 import ServicesScreen from './services';
-import { HapticTab } from '@/components/HapticTab';
 import SubscriptionsScreen from './subscriptions';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
 
 
 const Tab = createMaterialTopTabNavigator();
@@ -34,6 +33,7 @@ const _layout = () => {
     return (
         <Tab.Navigator
             screenOptions={{
+                swipeEnabled:false,
                 tabBarScrollEnabled: true,
                 tabBarActiveTintColor: '#121517', // active tab text color
                 tabBarInactiveTintColor: '#121517', // inactive tab text color
@@ -44,7 +44,7 @@ const _layout = () => {
                 },
                 tabBarLabelStyle: {
                     fontSize: 18,
-                    fontFamily: 'SpaceGrotesk_600SemiBold', // 👈 use your custom font here
+                    fontFamily: 'Outfit_600SemiBold', // 👈 use your custom font here
                     textTransform: 'none',
                 },
                 tabBarStyle: {

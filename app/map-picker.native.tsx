@@ -62,7 +62,7 @@ export default function MapPickerScreen() {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerTitle: () => (
-        <Text style={{ fontSize: 20, fontFamily: 'SpaceGrotesk_700Bold', color: '#121516' }}>
+        <Text style={{ fontSize: 20, fontFamily: 'Outfit_700Bold', color: '#121516' }}>
           SELECT LOCATION
         </Text>
       ),
@@ -133,7 +133,7 @@ export default function MapPickerScreen() {
       }}>
         <Text style={{
           fontSize: 16,
-          fontFamily: 'SpaceGrotesk_600SemiBold',
+          fontFamily: 'Outfit_600SemiBold',
           color: '#4fa3c4',
           textAlign: 'center',
         }}>
@@ -175,7 +175,7 @@ export default function MapPickerScreen() {
         }}>
           <Text style={{
             fontSize: 16,
-            fontFamily: 'SpaceGrotesk_700Bold',
+            fontFamily: 'Outfit_700Bold',
             color: '#121516',
             marginBottom: 4,
           }}>
@@ -183,7 +183,7 @@ export default function MapPickerScreen() {
           </Text>
           <Text style={{
             fontSize: 14,
-            fontFamily: 'SpaceGrotesk_400Regular',
+            fontFamily: 'Outfit_400Regular',
             color: '#687b82',
             lineHeight: 20,
           }}>
@@ -217,7 +217,7 @@ export default function MapPickerScreen() {
           <X size={20} color="#687b82" />
           <Text style={{
             fontSize: 16,
-            fontFamily: 'SpaceGrotesk_600SemiBold',
+            fontFamily: 'Outfit_600SemiBold',
             color: '#687b82',
             marginLeft: 6,
           }}>
@@ -241,7 +241,7 @@ export default function MapPickerScreen() {
           <Check size={20} color="white" />
           <Text style={{
             fontSize: 16,
-            fontFamily: 'SpaceGrotesk_600SemiBold',
+            fontFamily: 'Outfit_600SemiBold',
             color: 'white',
             marginLeft: 6,
           }}>

@@ -1,26 +1,26 @@
+import { AuthProvider } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import '../global.css';
 import 'react-native-reanimated';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { CartProvider } from '@/contexts/CartContext';
-import { AuthProvider } from '@/contexts/AuthContext';
+import '../global.css';
 
 // 1. Import the Space Grotesk font loader
-import {
-  SpaceGrotesk_400Regular,
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  SpaceGrotesk_700Bold,
-} from '@expo-google-fonts/space-grotesk';
-import { SheetProvider } from 'react-native-actions-sheet';
-import { TouchableOpacity, Text, View, KeyboardAvoidingView, Platform } from 'react-native';
-import { ShoppingCart } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
-import { useRouter } from 'expo-router'
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import {
+  Outfit_400Regular,
+  Outfit_500Medium,
+  Outfit_600SemiBold,
+  Outfit_700Bold
+} from '@expo-google-fonts/outfit';
+import { useRouter } from 'expo-router';
+import { ShoppingCart } from 'lucide-react-native';
+import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { SheetProvider } from 'react-native-actions-sheet';
 
 function CartHeaderButton() {
   const { state } = useCart();
@@ -63,10 +63,10 @@ export default function RootLayout() {
 
   // 2. Load the Space Grotesk fonts
   const [fontsLoaded] = useFonts({
-    SpaceGrotesk_400Regular,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
-    SpaceGrotesk_700Bold,
+    Outfit_400Regular,
+    Outfit_500Medium,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
   });
 
   if (!fontsLoaded) {

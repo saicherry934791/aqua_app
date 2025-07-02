@@ -28,7 +28,7 @@ const ServiceRequests = () => {
         try {
             setError(null);
             const response = await apiService.get('/service-requests');
-            
+            console.log('service requires ',response)
             if (response.success) {
                 setServiceRequests(response.data.serviceRequests || []);
             } else {
