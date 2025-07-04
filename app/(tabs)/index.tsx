@@ -1,4 +1,5 @@
 import { apiService } from '@/api/api';
+import LocationNotAvailable from '@/components/LocationNotAvailable';
 import HomeSkeleton from '@/components/skeletons/HomeSkeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation, useRouter } from 'expo-router';
@@ -55,37 +56,6 @@ const AquaHomeApp = () => {
       setLoading(false);
     }
   };
-
-  // Component for location not available
-  const LocationNotAvailable = () => (
-    <View className="flex-1 bg-white items-center justify-center px-4">
-      <View className="bg-[#e8f4f8] rounded-2xl p-6 items-center w-full">
-        <View className="w-20 h-20 bg-[#4fa3c4] rounded-full items-center justify-center mb-4">
-          <MapPin size={40} color="white" />
-        </View>
-
-        <Text className="text-2xl font-grotesk-bold text-[#121516] text-center mb-2">
-          We're Coming Soon!
-        </Text>
-
-        <Text className="text-base text-[#6a7a81] font-grotesk-medium text-center mb-6 leading-relaxed">
-          AquaHome services aren't available in your area yet, but we're working hard to expand our reach.
-        </Text>
-
-        <View className="bg-white rounded-xl p-4 w-full mb-6">
-          <View className="flex-row items-center mb-2">
-            <MapPin size={16} color="#4fa3c4" />
-            <Text className="text-sm text-[#4fa3c4] font-grotesk-medium ml-2">
-              Current Location
-            </Text>
-          </View>
-          <Text className="text-base text-[#121516] font-grotesk-medium">
-            {user?.address || 'Chennai, Tamil Nadu'}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
 
 
   if (loading) {

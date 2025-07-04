@@ -60,7 +60,7 @@ function CheckoutScreen() {
   // Check if user already has location coordinates
   React.useEffect(() => {
     console.log('location is ', user.location)
-    if (user?.location.latitude && user?.location.longitude && user?.address) {
+    if (user?.location?.latitude && user?.location?.longitude && user?.address) {
       setShippingInfo(prev => ({
         ...prev,
         address: user.address,

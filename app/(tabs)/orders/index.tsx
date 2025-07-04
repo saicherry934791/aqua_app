@@ -122,6 +122,17 @@ export default function OrdersScreen() {
                     </View>
                 </TouchableOpacity>
             ))}
+            {/* Empty State */}
+            {orders.length === 0 && (
+                <View className="flex-1 justify-center items-center py-20">
+                    <Text className="text-xl font-grotesk-bold text-primary mb-2">
+                        No Orders
+                    </Text>
+                    <Text className="text-base font-grotesk text-secondary text-center">
+                        Your orders will appear here
+                    </Text>
+                </View>
+            )}
         </ScrollView>
     );
 }

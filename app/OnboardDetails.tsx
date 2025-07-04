@@ -56,7 +56,7 @@ export default function OnboardDetailsScreen() {
   // ALL HOOKS MUST BE CALLED AT THE TOP, BEFORE ANY CONDITIONAL LOGIC
   const navigation = useNavigation();
   const router = useRouter();
-  const { isAuthenticated, user, isLoading } = useAuth();
+  const { isAuthenticated, user, isLoading,setUser } = useAuth();
 
   // All useState hooks
   const [loading, setLoading] = useState(false);
@@ -569,6 +569,10 @@ export default function OnboardDetailsScreen() {
           'Your profile has been completed successfully. You can now enjoy our services.',
           [{ text: 'Get Started', onPress: () => router.replace('/(tabs)') }]
         );
+        setUser({
+          ...user,
+          hasOnboarded:true
+        })
         router.replace('/(tabs)');
       } else {
         Alert.alert('Error', result.error || 'Failed to update profile');

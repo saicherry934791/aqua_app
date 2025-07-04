@@ -1,4 +1,3 @@
-import { apiService } from '@/services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
@@ -9,6 +8,7 @@ import {
   signOut
 } from '@react-native-firebase/auth';
 import { router } from 'expo-router';
+import { apiService } from '@/api/api';
 
 export enum UserRole {
   CUSTOMER = 'customer',
@@ -26,7 +26,7 @@ export enum CustomerType {
 
 export interface User {
   id: string;
-  phoneNumber: string;
+  phone: string;
   role: UserRole;
   customerType: CustomerType;
   franchiseId?: string;
@@ -37,6 +37,7 @@ export interface User {
   email?: string;
   avatar?: string;
   address?: string;
+  alternativePhone?:string
 
 }
 
@@ -76,6 +77,7 @@ interface AuthContextType {
 
   // Refresh user data
   refreshUser: () => Promise<void>;
+  setUser : (user:User)=>void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -458,6 +460,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     canAccessScreen,
     canAccessTab,
     refreshUser,
+    setUser
   };
 
   return (

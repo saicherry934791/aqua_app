@@ -15,19 +15,23 @@ import {
 import { Path, Svg } from 'react-native-svg';
 import ActionSheet, { ActionSheetRef } from 'react-native-actions-sheet';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/api/api';
 
 export default function ProfileScreen() {
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
-    
+    const { user, setUser } = useAuth()
+
+
+
     // Profile data state
     const [profileData, setProfileData] = useState({
-        name: 'Sophia Carter',
-        email: 'sophia.carter@email.com',
-        phone: '+1 (555) 123-4567',
-        alternatePhone: '+1 (555) 987-6543',
-        address: '123 Main St, Anytown, USA',
+        name: user?.name,
+        email: user?.email,
+        phone: user?.phone,
+        alternatePhone: user?.alternativePhone,
+        address: user?.address,
     });
 
     // Edit form states
@@ -82,25 +86,36 @@ export default function ProfileScreen() {
         }
 
         setIsLoading(true);
-        
+
         try {
+            console.log('editData ', editData)
             // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            // Update profile data
-            setProfileData(prev => ({
-                ...prev,
-                [currentEditField]: editData
-            }));
-            
+            const response = await apiService.patch(`users/${user?.id}`, { currentEditField: editData })
+            console.log('response is in account ', response)
+            if (response.success) {
+                setUser({
+                    ...user,
+                    [currentEditField]: editData
+                })
+
+                // Update profile data
+                setProfileData(prev => ({
+                    ...prev,
+                    [currentEditField]: editData
+                }));
+            }
+
+
+
             // Close action sheet
-            editActionSheetRef.current?.hide();
-            
+
+
             Alert.alert('Success', `${fieldLabel} updated successfully!`);
         } catch (error) {
             Alert.alert('Error', 'Failed to update. Please try again.');
         } finally {
             setIsLoading(false);
+            editActionSheetRef.current?.hide();
         }
     };
 
@@ -125,16 +140,16 @@ export default function ProfileScreen() {
     const performLogout = async () => {
         try {
             setLogoutLoading(true);
-            
+
             // Simulate API call for logout
             await new Promise(resolve => setTimeout(resolve, 1500));
-            
+
             // Call logout from auth context
             await logout();
-            
+
             // Navigate to auth screen
             router.replace('/(auth)');
-            
+
         } catch (error) {
             Alert.alert('Error', 'Failed to logout. Please try again.');
         } finally {
@@ -154,6 +169,16 @@ export default function ProfileScreen() {
         </Svg>
     );
 
+    const getInitials = (name: string) => {
+        if (!name) return 'U';
+        return name
+            .split(' ')
+            .map(word => word.charAt(0))
+            .join('')
+            .toUpperCase()
+            .slice(0, 2);
+    };
+
     return (
         <SafeAreaView className="flex-1 bg-white">
             <ScrollView className="flex-1">
@@ -161,17 +186,18 @@ export default function ProfileScreen() {
                 <View className="p-4">
                     <View className="w-full flex-col gap-4 items-center">
                         <View className="gap-4 flex-col items-center">
-                            <Image
-                                source={{
-                                    uri: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400',
-                                }}
-                                className="w-32 h-32 rounded-full"
-                                resizeMode="cover"
-                            />
+                            <View
+                                className="w-32 h-32 rounded-full items-center justify-center"
+                                style={{ backgroundColor: '#3a9dc4' }}
+                            >
+                                <Text className="text-white text-4xl font-grotesk-bold">
+                                    {getInitials(profileData.name || '')}
+                                </Text>
+                            </View>
                             <View className="flex-col items-center justify-center">
                                 <View className="flex-row items-center gap-2">
                                     <Text className="text-[#121517] text-3xl font-grotesk-bold text-center">
-                                        { profileData.name}
+                                        {profileData.name}
                                     </Text>
                                     <TouchableOpacity
                                         onPress={() => openEditSheet('name', 'Full Name')}
@@ -181,7 +207,7 @@ export default function ProfileScreen() {
                                     </TouchableOpacity>
                                 </View>
                                 <Text className="text-[#687b82] text-base font-grotesk-medium text-center">
-                                    Member since 2022
+                                    Member since {new Date(user?.createdAt).getFullYear().toString()}
                                 </Text>
                             </View>
                         </View>
@@ -193,26 +219,7 @@ export default function ProfileScreen() {
                     Account
                 </Text>
 
-                {/* Email */}
-                <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2">
-                    <View className="w-12 h-12 items-center justify-center rounded-lg bg-[#f1f3f4]">
-                        <Svg width={24} height={24} viewBox="0 0 256 256" fill="#121517">
-                            <Path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z" />
-                        </Svg>
-                    </View>
-                    <View className="flex-col justify-center flex-1">
-                        <Text className="text-[#121517] text-xl font-grotesk-medium">Email</Text>
-                        <Text style={{ color: '#697A82' }} className="text-base font-grotesk">
-                            { profileData.email}
-                        </Text>
-                    </View>
-                    <TouchableOpacity
-                        onPress={() => openEditSheet('email', 'Email Address', 'email-address')}
-                        className="p-2"
-                    >
-                        <EditIcon />
-                    </TouchableOpacity>
-                </View>
+
 
                 {/* Phone */}
                 <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2">
@@ -223,10 +230,25 @@ export default function ProfileScreen() {
                     </View>
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Phone</Text>
-                        <Text className="text-[#687b82] text-sm">{ profileData.phone}</Text>
+                        <Text className="text-[#687b82] text-sm">{profileData.phone}</Text>
+                    </View>
+
+                </View>
+                {/* Email */}
+                <View className="flex-row items-center gap-4 bg-white px-4 min-h-[72px] py-2">
+                    <View className="w-12 h-12 items-center justify-center rounded-lg bg-[#f1f3f4]">
+                        <Svg width={24} height={24} viewBox="0 0 256 256" fill="#121517">
+                            <Path d="M224,48H32a8,8,0,0,0-8,8V192a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A8,8,0,0,0,224,48Zm-96,85.15L52.57,64H203.43ZM98.71,128,40,181.81V74.19Zm11.84,10.85,12,11.05a8,8,0,0,0,10.82,0l12-11.05,58,53.15H52.57ZM157.29,128,216,74.18V181.82Z" />
+                        </Svg>
+                    </View>
+                    <View className="flex-col justify-center flex-1">
+                        <Text className="text-[#121517] text-xl font-grotesk-medium">Email</Text>
+                        <Text style={{ color: '#697A82' }} className="text-base font-grotesk">
+                            {profileData.email}
+                        </Text>
                     </View>
                     <TouchableOpacity
-                        onPress={() => openEditSheet('phone', 'Phone Number', 'phone-pad')}
+                        onPress={() => openEditSheet('email', 'Email Address', 'email-address')}
                         className="p-2"
                     >
                         <EditIcon />
@@ -243,7 +265,7 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Alternate Phone</Text>
                         <Text className="text-[#687b82] text-sm">
-                            { profileData.alternatePhone}
+                            {profileData.alternatePhone}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -264,15 +286,15 @@ export default function ProfileScreen() {
                     <View className="flex-col justify-center flex-1">
                         <Text className="text-[#121517] text-xl font-grotesk-medium">Address</Text>
                         <Text className="text-[#687b82] text-sm">
-                            { profileData.address}
+                            {profileData.address}
                         </Text>
                     </View>
-                    <TouchableOpacity
+                    {/* <TouchableOpacity
                         onPress={() => openEditSheet('address', 'Address')}
                         className="p-2"
                     >
                         <EditIcon />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
 
                 {/* Settings Section */}
@@ -328,7 +350,7 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
 
                 {/* Logout */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     className="flex-row items-center gap-4 bg-white px-4 min-h-14 justify-between"
                     onPress={handleLogout}
                     disabled={logoutLoading}
@@ -356,22 +378,22 @@ export default function ProfileScreen() {
                     borderTopLeftRadius: 20,
                     borderTopRightRadius: 20,
                 }}
-                gestureEnabled
-                closeOnTouchBackdrop
+                gestureEnabled={false}
+                closeOnTouchBackdrop={false}
             >
-                <View className="p-6">
+                <View className="p-6 mb-20">
                     <View className="flex-row justify-between items-center mb-6">
                         <Text className="text-xl font-grotesk-bold text-[#121517]">
                             Edit {fieldLabel}
                         </Text>
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             onPress={() => editActionSheetRef.current?.hide()}
                             className="w-8 h-8 items-center justify-center"
                         >
                             <Svg width={20} height={20} viewBox="0 0 256 256" fill="#687b82">
                                 <Path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
                             </Svg>
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                     </View>
 
                     <View className="mb-6">
@@ -384,10 +406,11 @@ export default function ProfileScreen() {
                             placeholder={`Enter your ${fieldLabel.toLowerCase()}`}
                             keyboardType={keyboardType as any}
                             className="border border-[#e1e5e7] rounded-lg px-4 py-3 text-base font-grotesk text-[#121517]"
-                            autoFocus
+                            autoFocus={true}
                             multiline={currentEditField === 'address'}
                             numberOfLines={currentEditField === 'address' ? 3 : 1}
                             textAlignVertical={currentEditField === 'address' ? 'top' : 'center'}
+
                         />
                     </View>
 
@@ -398,15 +421,14 @@ export default function ProfileScreen() {
                         >
                             <Text className="text-base font-grotesk-medium text-[#687b82]">Cancel</Text>
                         </TouchableOpacity>
-                        
+
                         <TouchableOpacity
                             onPress={handleSave}
                             disabled={isLoading || !editData?.trim()}
-                            className={`flex-1 py-3 px-4 rounded-lg items-center justify-center ${
-                                isLoading || !editData?.trim() 
-                                    ? 'bg-[#e1e5e7]' 
-                                    : 'bg-[#3a9dc4]'
-                            }`}
+                            className={`flex-1 py-3 px-4 rounded-lg items-center justify-center ${isLoading || !editData?.trim()
+                                ? 'bg-[#e1e5e7]'
+                                : 'bg-[#3a9dc4]'
+                                }`}
                         >
                             {isLoading ? (
                                 <ActivityIndicator color="white" size="small" />

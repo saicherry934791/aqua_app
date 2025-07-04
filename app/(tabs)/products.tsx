@@ -1,6 +1,8 @@
 import { apiService } from '@/api/api';
+import LocationNotAvailable from '@/components/LocationNotAvailable';
 import ProductSkeleton from '@/components/skeltons/ProductsSkeleton';
 import SkeletonWrapper from '@/components/skeltons/SkeletonWrapper';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigation } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import React, { useEffect, useLayoutEffect, useState } from 'react';
@@ -15,12 +17,13 @@ const ProductsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const { user } = useAuth()
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
       const response = await apiService.get('/products')
-      console.log('products are in fetch ',JSON.stringify(response.data.products))
+      console.log('products are in fetch ', JSON.stringify(response.data.products))
       if (response.success) {
         setProducts(response.data.products);
       }
@@ -54,6 +57,13 @@ const ProductsScreen = () => {
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  if (!user?.franchiseAreaId) {
+    return (
+      <SafeAreaView className="flex-1 bg-white">
+        <LocationNotAvailable />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -90,7 +100,7 @@ const ProductsScreen = () => {
               >
                 <View className="mb-3">
                   <Animated.Image
-               
+
                     source={{ uri: product.images[0] }}
                     className="w-full aspect-square rounded-xl"
                     resizeMode="cover"
