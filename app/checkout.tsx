@@ -283,7 +283,7 @@ function CheckoutScreen() {
         description: 'AquaHome Purchase',
         image: 'https://your-logo-url.com/logo.png',
         currency: paymentInfo.currency,
-        key: 'rzp_live_zOjuJaoBGy4ZSN',
+        key: 'rzp_test_xO0tLP7qE6olyd',
         amount: paymentInfo.amount, // Already in paise from backend
         name: 'AquaHome',
         order_id: paymentInfo.razorpayOrderId,

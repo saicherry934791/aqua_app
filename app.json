@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "aquaHomeUi",
+    "name": "AquaHome UI",
     "slug": "aquaHomeUi",
     "version": "1.0.0",
     "jsEngine": "hermes",
@@ -29,7 +29,7 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "package": "com.cherry93479.firebase"
+      "package": "com.cherry93479.aquaHomeUi"
     },
     "web": {
       "bundler": "metro",
@@ -60,6 +60,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c89dd597-d1ee-4a1e-b4da-191fe0e4be37"
+      }
     }
   }
 }

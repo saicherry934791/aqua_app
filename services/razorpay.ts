@@ -101,7 +101,7 @@ class RazorpayService {
           .then((data: PaymentResult) => {
             resolve(data);
           })
-          .catch((error: any) => {
+        .catch((error: any) => {
             reject(error);
           });
       });
